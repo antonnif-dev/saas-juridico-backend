@@ -1,6 +1,5 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const serviceAccount = require('./saas-juridico-firebase-adminsdk.json');
 
 let serviceAccount;
 
