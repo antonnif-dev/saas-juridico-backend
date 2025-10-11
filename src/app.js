@@ -13,7 +13,8 @@ const webhookRoutes = require('./api/routes/webhook.routes');
 
 const app = express();
 const corsOptions = {
-  origin: 'http://localhost:5173', // A porta EXATA do seu frontend Vite
+  origin: ['http://localhost:5173', // A porta EXATA do seu frontend Vite
+  'https://saas-juridico-frontend.vercel.app'], // Adicionamos a URL de produção
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Headers permitidos
 };

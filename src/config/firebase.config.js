@@ -1,5 +1,16 @@
+require('dotenv').config();
 const admin = require('firebase-admin');
 const serviceAccount = require('./saas-juridico-firebase-adminsdk.json');
+
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  // Em produção (Vercel)
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+} else {
+  // Em desenvolvimento local
+  serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
