@@ -27,7 +27,11 @@ const limiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  trustProxy: 1, //adcionado como teste
 });
+
+
+
 app.use(limiter);
 app.use(express.json());
 app.use('/api/clients', clientRoutes);
