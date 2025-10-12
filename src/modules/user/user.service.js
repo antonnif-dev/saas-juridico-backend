@@ -8,11 +8,27 @@ class UserService {
    * @returns {Promise<void>}
    */
   async setUserRole(uid, role) {
-    // Validações adicionais podem ser feitas aqui (ex: se o role é válido)
     await auth.setCustomUserClaims(uid, { role: role });
     console.log(`Perfil '${role}' atribuído ao usuário ${uid}`);
-    // É uma boa prática retornar algo para confirmar a operação
     return { message: `Perfil '${role}' atribuído com sucesso.` };
+  }
+
+  async createAdvogado(userData) {
+    const { name, email, password } = userData;
+    const userRecord = await auth.createUser({
+      email: email,
+      password: password,
+      displayName: name,
+    });
+
+    await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
+    const cleanUser = {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName,
+      role: 'advogado'
+    };
+    return cleanUser;
   }
 }
 
