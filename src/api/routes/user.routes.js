@@ -22,6 +22,14 @@ const createAdvogadoSchema = z.object({
   })
 });
 
+const updateSelfSchema = z.object({
+  body: z.object({
+    name: z.string().min(3).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(6).optional(),
+  })
+});
+
 /**
  * Rota para atualizar o perfil de um usuário.
  * PATCH /api/users/:uid/role
@@ -47,6 +55,13 @@ router.post(
   authMiddleware(['administrador']), // Protege a rota, permitindo acesso APENAS a administradores.
   validate(createAdvogadoSchema),
   userController.createAdvogado
+);
+
+router.put(
+  '/me',
+  authMiddleware(),
+  validate(updateSelfSchema),
+  userController.updateMe
 );
 
 module.exports = router;
