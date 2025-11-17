@@ -5,3 +5,4 @@ src/config/saas-juridico-firebase-adminsdk.json
 node_modules/
 .env
 supabaseClient.js
+.vercel
