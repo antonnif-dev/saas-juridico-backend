@@ -38,37 +38,66 @@ class UserController {
   }
 
   async updateMe(req, res) {
-  try {
-    const uid = req.user.uid; // vem do token passado pelo authMiddleware
-    const { name, email, password } = req.body;
+    try {
+      const uid = req.user.uid; // vem do token passado pelo authMiddleware
+      const { name, email, password } = req.body;
 
-    const updates = {};
+      const updates = {};
 
-    if (name) updates.name = name;
-    if (email) updates.email = email;
-    if (password) updates.password = password;
+      if (name) updates.name = name;
+      if (email) updates.email = email;
+      if (password) updates.password = password;
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ message: 'Nenhuma informação para atualizar foi enviada.' });
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: 'Nenhuma informação para atualizar foi enviada.' });
+      }
+
+      const updatedUser = await userService.updateUser(uid, updates);
+
+      res.status(200).json({
+        message: 'Perfil atualizado com sucesso.',
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+
+      if (error.code === 'auth/email-already-exists') {
+        return res.status(409).json({ message: 'Este e-mail já está em uso.' });
+      }
+
+      res.status(500).json({ message: 'Erro ao atualizar o perfil.', error: error.message });
     }
-
-    const updatedUser = await userService.updateUser(uid, updates);
-
-    res.status(200).json({
-      message: 'Perfil atualizado com sucesso.',
-      user: updatedUser
-    });
-  } catch (error) {
-    console.error("Erro ao atualizar perfil:", error);
-
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ message: 'Este e-mail já está em uso.' });
-    }
-
-    res.status(500).json({ message: 'Erro ao atualizar o perfil.', error: error.message });
   }
-}
-
+  
+  async listAdvogados(req, res) {
+    try {
+      const users = await userService.listAdvogados();
+      res.status(200).json(users);
+    } catch (error) {
+      console.error("!!! ERRO AO LISTAR ADVOGADOS:", error);
+      res.status(500).json({ message: 'Erro interno ao listar usuários.' });
+    }
+  }
+  async updateAdvogado(req, res) {
+    try {
+      const { id } = req.params;
+      const updatedUser = await userService.updateAdvogado(id, req.body);
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error("!!! ERRO AO ATUALIZAR ADVOGADO:", error);
+      res.status(500).json({ message: 'Erro interno ao atualizar usuário.' });
+    }
+  }
+  async deleteAdvogado(req, res) {
+    try {
+      const { id } = req.params;
+      await userService.deleteAdvogado(id);
+      res.status(204).send(); // 204: Sucesso, sem conteúdo para retornar
+    } catch (error) {
+      console.error("!!! ERRO AO DELETAR ADVOGADO:", error);
+      res.status(500).json({ message: 'Erro interno ao deletar usuário.' });
+    }
+  }
 }
 
 module.exports = new UserController();

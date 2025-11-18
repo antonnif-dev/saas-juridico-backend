@@ -30,7 +30,7 @@ class UserService {
     };
     return cleanUser;
   }
-  
+
   async updateUser(uid, updates) {
     const userRecord = await auth.updateUser(uid, {
       displayName: updates.name,
@@ -51,6 +51,40 @@ class UserService {
       name: userRecord.displayName,
       email: userRecord.email,
     };
+  }
+
+  async listAdvogados() {
+    const listUsersResult = await auth.listUsers(1000);
+
+    const advogados = listUsersResult.users
+      .filter(user => user.customClaims && user.customClaims.role === 'advogado')
+      .map(user => {
+        return {
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName,
+        };
+      });
+
+    return advogados;
+  }
+  async updateAdvogado(userId, dataToUpdate) {
+    const { name, email } = dataToUpdate;
+
+    const updatedUser = await auth.updateUser(userId, {
+      displayName: name,
+      email: email,
+    });
+
+    return {
+      uid: updatedUser.uid,
+      email: updatedUser.email,
+      name: updatedUser.displayName,
+    };
+  }
+  async deleteAdvogado(userId) {
+    await auth.deleteUser(userId);
+    return { message: 'Usuário deletado com sucesso.' };
   }
 }
 

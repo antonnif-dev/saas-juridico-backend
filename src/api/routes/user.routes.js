@@ -5,7 +5,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validator.middleware');
 const { z } = require('zod');
 
-// Schema para validar o corpo da requisição de mudança de perfil
 const updateRoleSchema = z.object({
   body: z.object({
     role: z.enum(['advogado', 'estagiario', 'secretaria', 'administrador'], {
@@ -22,6 +21,13 @@ const createAdvogadoSchema = z.object({
   })
 });
 
+const updateAdvogadoSchema = z.object({
+  body: z.object({
+    name: z.string().min(3).optional(),
+    email: z.string().email().optional(),
+  })
+});
+
 const updateSelfSchema = z.object({
   body: z.object({
     name: z.string().min(3).optional(),
@@ -30,31 +36,43 @@ const updateSelfSchema = z.object({
   })
 });
 
-/**
- * Rota para atualizar o perfil de um usuário.
- * PATCH /api/users/:uid/role
- *
- * - Apenas usuários com o perfil 'administrador' podem acessar.
- * - O corpo da requisição deve conter o novo 'role'.
- */
 router.patch(
   '/:uid/role',
-  authMiddleware(['administrador']), // <-- SEGURANÇA MÁXIMA AQUI
+  authMiddleware(['administrador']),
   validate(updateRoleSchema),
   userController.updateRole
 );
 
 router.get(
   '/me',
-  authMiddleware(), // Apenas requer que o usuário esteja logado, não importa o perfil
+  authMiddleware(),
   userController.getMe
 );
 
 router.post(
   '/advogado',
-  authMiddleware(['administrador']), // Protege a rota, permitindo acesso APENAS a administradores.
+  authMiddleware(['administrador']),
   validate(createAdvogadoSchema),
   userController.createAdvogado
+);
+
+router.get(
+  '/advogados',
+  authMiddleware(['administrador']),
+  userController.listAdvogados
+);
+
+router.put(
+  '/advogado/:id',
+  authMiddleware(['administrador']),
+  validate(updateAdvogadoSchema),
+  userController.updateAdvogado
+);
+
+router.delete(
+  '/advogado/:id',
+  authMiddleware(['administrador']),
+  userController.deleteAdvogado
 );
 
 router.put(
