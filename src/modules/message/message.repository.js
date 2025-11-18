@@ -42,6 +42,32 @@ class MessageRepository {
       
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
+
+  async addMessage(conversationId, messageData) {
+    const conversationRef = conversationsCollection.doc(conversationId);
+    
+    // 1. Adiciona a mensagem na subcoleção 'messages'
+    const messageRef = await conversationRef.collection('messages').add(messageData);
+    
+    // 2. Atualiza a conversa com a última mensagem e data
+    await conversationRef.update({
+      lastMessage: messageData.content,
+      updatedAt: messageData.createdAt
+    });
+
+    return { id: messageRef.id, ...messageData };
+  }
+
+  // Lista mensagens de uma conversa
+  async getMessages(conversationId) {
+    const snapshot = await conversationsCollection
+      .doc(conversationId)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .get();
+      
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 }
 
 module.exports = new MessageRepository();

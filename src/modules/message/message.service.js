@@ -35,6 +35,23 @@ class MessageService {
 
     return enriched;
   }
+
+  async sendMessage(conversationId, userId, content) {
+    const messageData = {
+      content,
+      senderId: userId,
+      createdAt: new Date().toISOString(), // Use string ISO para facilitar no frontend
+      read: false
+    };
+    
+    return await messageRepository.addMessage(conversationId, messageData);
+  }
+
+  async listMessages(conversationId) {
+    return await messageRepository.getMessages(conversationId);
+  }
+
+  
 }
 
 module.exports = new MessageService();
