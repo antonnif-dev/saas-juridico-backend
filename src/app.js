@@ -12,6 +12,7 @@ const portalRoutes = require('./api/routes/portal.routes');
 const webhookRoutes = require('./api/routes/webhook.routes');
 const themeRoutes = require('./api/routes/theme.routes');
 const messageRoutes = require('./api/routes/message.routes');
+const preatendimentoRoutes = require('./api/routes/preatendimento.routes');
 
 const app = express();
 const corsOptions = {
