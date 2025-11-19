@@ -47,6 +47,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/theme', themeRoutes);
 app.use('/api/mensagens', messageRoutes);
+app.use('/api/preatendimento', preatendimentoRoutes);
 app.get('/', (req, res) => {
   res.status(200).send({ message: 'API do SaaS Jurídico no ar!' });
 });
