@@ -1,9 +1,8 @@
-const { db } = require('../../config/firebase.config');
+const { db, auth } = require('../../config/firebase.config');
 const { FieldValue } = require('firebase-admin/firestore');
 const collection = db.collection('preatendimentos');
 const clientsCollection = db.collection('clients');
 const casesCollection = db.collection('processo');
-const { db, auth } = require('../../config/firebase.config');
 
 class PreAtendimentoRepository {
   async create(data) {
