@@ -23,7 +23,7 @@ class PreAtendimentoController {
     try {
       const { id } = req.params;
       const { status } = req.body; // 'aceitar' ou 'converter'
-      
+
       if (status === 'aceitar') {
         await service.accept(id);
       }
@@ -36,10 +36,17 @@ class PreAtendimentoController {
   async convert(req, res) {
     try {
       const { id } = req.params;
-      const { data } = req.body; // Dados completos do lead para criar o cliente
-      await service.convert(id, data);
-      res.status(200).json({ message: 'Convertido em processo com sucesso!' });
+      const { data } = req.body;
+      const adminId = req.user.uid;
+
+      const result = await service.convert(id, data, adminId);
+
+      res.status(200).json({
+        message: 'Convertido com sucesso!',
+        tempPassword: result.tempPassword
+      });
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: error.message });
     }
   }

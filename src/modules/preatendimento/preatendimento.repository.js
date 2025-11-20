@@ -3,6 +3,7 @@ const { FieldValue } = require('firebase-admin/firestore');
 const collection = db.collection('preatendimentos');
 const clientsCollection = db.collection('clients');
 const casesCollection = db.collection('processo');
+const { db, auth } = require('../../config/firebase.config');
 
 class PreAtendimentoRepository {
   async create(data) {
@@ -27,42 +28,65 @@ class PreAtendimentoRepository {
     await collection.doc(id).delete();
   }
 
-  // A Mágica: Transforma os dados em Cliente e Processo
-  async convertToCase(id, data) {
+  async convertToCase(id, data, adminId) {
+    const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
+    let uid;
+
+    try {
+      const userRecord = await auth.createUser({
+        email: data.email,
+        password: tempPassword,
+        displayName: data.nome,
+      });
+      uid = userRecord.uid;
+      await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
+    } catch (error) {
+      if (error.code === 'auth/email-already-exists') {
+        const existingUser = await auth.getUserByEmail(data.email);
+        uid = existingUser.uid;
+      } else {
+        throw error;
+      }
+    }
+
     const batch = db.batch();
 
-    // 1. Cria o Cliente
-    const clientRef = clientsCollection.doc();
+    const clientRef = clientsCollection.doc(uid);
     const clientData = {
       name: data.nome,
       email: data.email,
       cpfCnpj: data.cpfCnpj,
       phone: data.telefone,
       address: data.endereco,
+      status: 'ativo',
       createdAt: new Date(),
       convertedFrom: id
     };
-    batch.set(clientRef, clientData);
+    batch.set(clientRef, clientData, { merge: true });
 
-    // 2. Cria o Processo vinculado ao Cliente
     const caseRef = casesCollection.doc();
     const caseData = {
       titulo: `Caso: ${data.categoria}`,
       descricao: data.resumoProblema,
-      clientId: clientRef.id, // Vincula ao novo cliente
+      clientId: clientRef.id,
+      responsavelUid: adminId,
       status: 'Em andamento',
       area: data.categoria,
       createdAt: new Date(),
-      urgencia: data.urgencia
+      urgencia: data.urgencia,
+      numeroProcesso: 'Aguardando Distribuição'
     };
     batch.set(caseRef, caseData);
 
-    // 3. Atualiza o Pré-atendimento para 'Convertido' (ou deleta, se preferir)
     const preRef = collection.doc(id);
     batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
 
     await batch.commit();
-    return { clientId: clientRef.id, caseId: caseRef.id };
+    return {
+      success: true,
+      tempPassword: tempPassword,
+      isNewUser: true
+    };
   }
 }
 
