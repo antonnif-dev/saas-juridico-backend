@@ -84,7 +84,9 @@ class PreAtendimentoRepository {
     return {
       success: true,
       tempPassword: tempPassword,
-      isNewUser: true
+      isNewUser: true,
+      clientId: uid,
+      caseId: caseRef.id
     };
   }
 }

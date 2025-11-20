@@ -20,6 +20,10 @@ class PreAtendimentoService {
   async convert(id, data) {
     return await repository.convertToCase(id, data);
   }
+
+  async convert(id, data, adminId) {
+    return await repository.convertToCase(id, data, adminId);
+  }
 }
 
 module.exports = new PreAtendimentoService();

@@ -42,8 +42,9 @@ class PreAtendimentoController {
       const result = await service.convert(id, data, adminId);
 
       res.status(200).json({
-        message: 'Convertido com sucesso!',
-        tempPassword: result.tempPassword
+        message: 'Convertido com sucesso!',        
+        tempPassword: result.tempPassword,
+        clientId: result.clientId
       });
     } catch (error) {
       console.error(error);
