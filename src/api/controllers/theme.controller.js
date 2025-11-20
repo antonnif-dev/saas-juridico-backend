@@ -21,6 +21,18 @@ class ThemeController {
       res.status(500).json({ message: 'Erro ao atualizar tema.', error: error.message });
     }
   }
+
+  async uploadLogo(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
+      }
+      const result = await themeService.uploadLogo(req.file);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro no upload do logo.', error: error.message });
+    }
+  }
 }
 
 module.exports = new ThemeController();

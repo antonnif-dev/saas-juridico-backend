@@ -22,7 +22,7 @@ class PreAtendimentoController {
   async updateStatus(req, res) {
     try {
       const { id } = req.params;
-      const { status } = req.body; // 'aceitar' ou 'converter'
+      const { status } = req.body;
 
       if (status === 'aceitar') {
         await service.accept(id);
@@ -32,25 +32,7 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
-  /*
-    async convert(req, res) {
-      try {
-        const { id } = req.params;
-        const { data } = req.body;
-        const adminId = req.user.uid;
-        const result = await service.convert(id, data, adminId);
   
-        res.status(200).json({
-          message: 'Convertido com sucesso!',
-          tempPassword: result.tempPassword,
-          clientId: result.clientId
-        });
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
-      }
-    }
-  */
   async convert(req, res) {
     try {
       const { id } = req.params;
@@ -64,17 +46,7 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
-  /*  
-  async delete(req, res) {
-    try {
-      const { id } = req.params;
-      await service.reject(id);
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
-*/
+
   async delete(req, res) {
     try {
       const { id } = req.params;
@@ -94,20 +66,7 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
-  /*
-    async updateProposal(req, res) {
-      try {
-        const { id } = req.params;
-        const data = req.body;
-        const adminId = req.user.uid;
-        const result = await service.convert(id, data, adminId);
-        await service.updateProposal(id, data);
-        res.status(200).json({ message: 'Proposta atualizada.' });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    }
-  */
+
   async updateProposal(req, res) {
     try {
       const { id } = req.params;
@@ -121,7 +80,7 @@ class PreAtendimentoController {
   async finalize(req, res) {
     try {
       const { id } = req.params;
-      const { data } = req.body; // Dados completos atuais do lead
+      const { data } = req.body;
       const adminId = req.user.uid;
 
       const result = await service.finalizeCase(id, data, adminId);
