@@ -75,7 +75,9 @@ class PreAtendimentoController {
   async updateProposal(req, res) {
     try {
       const { id } = req.params;
-      const data = req.body;       
+      const data = req.body;
+      const adminId = req.user.uid;
+      const result = await service.convert(id, data, adminId);
       await service.updateProposal(id, data);
       res.status(200).json({ message: 'Proposta atualizada.' });
     } catch (error) {
