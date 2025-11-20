@@ -9,10 +9,12 @@ class CaseRepository {
   }
 
   async findAllByOwner(userId) {
-    const snapshot = await casesCollection.where('createdBy', '==', userId).get();
+    const snapshot = await casesCollection.where('responsavelUid', '==', userId).get();    
     if (snapshot.empty) {
-      return [];
-    }
+       const legacySnapshot = await casesCollection.where('createdBy', '==', userId).get();
+       if (legacySnapshot.empty) return [];
+       return legacySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }    
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
