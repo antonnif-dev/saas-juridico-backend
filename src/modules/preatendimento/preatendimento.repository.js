@@ -35,10 +35,10 @@ class PreAtendimentoRepository {
       await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
     } catch (error) {
       if (error.code === 'auth/email-already-exists') {
-         const existingUser = await auth.getUserByEmail(data.email);
-         uid = existingUser.uid;
-         // Atualiza senha para garantir acesso
-         await auth.updateUser(uid, { password: tempPassword });
+        const existingUser = await auth.getUserByEmail(data.email);
+        uid = existingUser.uid;
+        // Atualiza senha para garantir acesso
+        await auth.updateUser(uid, { password: tempPassword });
       } else { throw error; }
     }
 
@@ -54,8 +54,8 @@ class PreAtendimentoRepository {
 
     // 4. Atualiza o Pré-atendimento
     const preRef = collection.doc(id);
-    batch.update(preRef, { 
-      status: 'Em Negociacao', 
+    batch.update(preRef, {
+      status: 'Em Negociacao',
       clientId: uid, // Vincula o cliente criado ao pré-atendimento
       proposalValue: null, // Campo para o valor
       proposalStatus: 'pending', // pending, sent, accepted, rejected
@@ -100,75 +100,82 @@ class PreAtendimentoRepository {
   async delete(id) {
     await collection.doc(id).delete();
   }
-/*
-  async convertToCase(id, data, adminId) {
-    const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
-    let uid;
-
-    try {
-      const userRecord = await auth.createUser({
-        email: data.email,
-        password: tempPassword,
-        displayName: data.nome,
-      });
-      uid = userRecord.uid;
-      await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
-    } catch (error) {
-      if (error.code === 'auth/email-already-exists') {
-        const existingUser = await auth.getUserByEmail(data.email);
-        uid = existingUser.uid;
-        await auth.updateUser(uid, {
+  /*
+    async convertToCase(id, data, adminId) {
+      const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
+      let uid;
+  
+      try {
+        const userRecord = await auth.createUser({
+          email: data.email,
           password: tempPassword,
-          displayName: data.nome
+          displayName: data.nome,
         });
-      } else {
-        throw error;
+        uid = userRecord.uid;
+        await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
+      } catch (error) {
+        if (error.code === 'auth/email-already-exists') {
+          const existingUser = await auth.getUserByEmail(data.email);
+          uid = existingUser.uid;
+          await auth.updateUser(uid, {
+            password: tempPassword,
+            displayName: data.nome
+          });
+        } else {
+          throw error;
+        }
       }
+  
+      const batch = db.batch();
+  
+      const clientRef = clientsCollection.doc(uid);
+      const clientData = {
+        name: data.nome,
+        email: data.email,
+        cpfCnpj: data.cpfCnpj,
+        phone: data.telefone,
+        address: data.endereco,
+        status: 'ativo',
+        createdAt: new Date(),
+        convertedFrom: id
+      };
+      batch.set(clientRef, clientData, { merge: true });
+  
+      const caseRef = casesCollection.doc();
+      const caseData = {
+        titulo: `Caso: ${data.categoria}`,
+        descricao: data.resumoProblema,
+        clientId: clientRef.id,
+        responsavelUid: adminId,
+        status: 'Em andamento',
+        area: data.categoria,
+        createdAt: new Date(),
+        urgencia: data.urgencia,
+        numeroProcesso: 'Aguardando Distribuição'
+      };
+      batch.set(caseRef, caseData);
+  
+      const preRef = collection.doc(id);
+      batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
+  
+      await batch.commit();
+      return {
+        success: true,
+        tempPassword: tempPassword,
+        isNewUser: true,
+        clientId: uid,
+        caseId: caseRef.id
+      };
     }
+  */
 
-    const batch = db.batch();
-
-    const clientRef = clientsCollection.doc(uid);
-    const clientData = {
-      name: data.nome,
-      email: data.email,
-      cpfCnpj: data.cpfCnpj,
-      phone: data.telefone,
-      address: data.endereco,
-      status: 'ativo',
-      createdAt: new Date(),
-      convertedFrom: id
-    };
-    batch.set(clientRef, clientData, { merge: true });
-
-    const caseRef = casesCollection.doc();
-    const caseData = {
-      titulo: `Caso: ${data.categoria}`,
-      descricao: data.resumoProblema,
-      clientId: clientRef.id,
-      responsavelUid: adminId,
-      status: 'Em andamento',
-      area: data.categoria,
-      createdAt: new Date(),
-      urgencia: data.urgencia,
-      numeroProcesso: 'Aguardando Distribuição'
-    };
-    batch.set(caseRef, caseData);
-
-    const preRef = collection.doc(id);
-    batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
-
-    await batch.commit();
-    return {
-      success: true,
-      tempPassword: tempPassword,
-      isNewUser: true,
-      clientId: uid,
-      caseId: caseRef.id
-    };
+  async addFile(id, fileData) {
+    // fileData: { url, public_id, nome, tipo }
+    await collection.doc(id).update({
+      adminFiles: FieldValue.arrayUnion(fileData)
+    });
+    return fileData;
   }
-*/
-
 }
 
 module.exports = new PreAtendimentoRepository();

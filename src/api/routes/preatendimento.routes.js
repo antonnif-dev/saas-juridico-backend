@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/preatendimento.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
+const multer = require('multer');
+const upload = multer();
 
 // Rota Pública (para o formulário na Landing Page)
 router.post('/', controller.create);
@@ -12,6 +14,7 @@ router.put('/:id/status', authMiddleware(['administrador', 'advogado']), control
 router.put('/:id/proposal', authMiddleware(['administrador', 'advogado']), controller.updateProposal);
 router.post('/:id/converter', authMiddleware(['administrador', 'advogado']), controller.convert);
 router.post('/:id/accept', authMiddleware(['administrador', 'advogado']), controller.accept);
+router.post('/:id/upload', authMiddleware(['administrador', 'advogado']), upload.single('documento'), controller.upload);
 router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);
 
 module.exports = router;

@@ -36,6 +36,26 @@ class PreAtendimentoService {
   async finalizeCase(id, preData, adminId) {
     return await repository.finalizeCase(id, preData, adminId);
   }
+
+  async uploadFile(id, file) {
+    const cloudinary = require('../../config/cloudinary.config');
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: `preatendimentos/${id}`, resource_type: 'auto' },
+        async (error, result) => {
+          if (error) return reject(error);
+          const fileData = {
+            url: result.secure_url,
+            nome: file.originalname,
+            tipo: file.mimetype
+          };
+          await repository.addFile(id, fileData);
+          resolve(fileData);
+        }
+      );
+      uploadStream.end(file.buffer);
+    });
+  }
 }
 
 module.exports = new PreAtendimentoService();

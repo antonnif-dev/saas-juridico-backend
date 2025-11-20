@@ -41,7 +41,7 @@ class PreAtendimentoController {
       const result = await service.convert(id, data, adminId);
 
       res.status(200).json({
-        message: 'Convertido com sucesso!',        
+        message: 'Convertido com sucesso!',
         tempPassword: result.tempPassword,
         clientId: result.clientId
       });
@@ -98,7 +98,16 @@ class PreAtendimentoController {
     }
   }
 
-
+  async upload(req, res) {
+    try {
+      const { id } = req.params;
+      if (!req.file) throw new Error("Nenhum arquivo enviado.");
+      const result = await service.uploadFile(id, req.file);
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new PreAtendimentoController();
