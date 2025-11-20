@@ -43,6 +43,10 @@ class PreAtendimentoRepository {
       if (error.code === 'auth/email-already-exists') {
         const existingUser = await auth.getUserByEmail(data.email);
         uid = existingUser.uid;
+        await auth.updateUser(uid, {
+          password: tempPassword,
+          displayName: data.nome
+        });
       } else {
         throw error;
       }
