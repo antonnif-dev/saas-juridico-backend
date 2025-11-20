@@ -24,6 +24,18 @@ class PreAtendimentoService {
   async convert(id, data, adminId) {
     return await repository.convertToCase(id, data, adminId);
   }
+
+  async acceptAndCreateClient(id, data) {
+    return await repository.acceptAndCreateClient(id, data);
+  }
+
+  async updateProposal(id, data) {
+    return await repository.updateProposal(id, data);
+  }
+
+  async finalizeCase(id, preData, adminId) {
+    return await repository.finalizeCase(id, preData, adminId);
+  }
 }
 
 module.exports = new PreAtendimentoService();

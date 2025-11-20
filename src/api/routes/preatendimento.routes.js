@@ -10,6 +10,7 @@ router.post('/', controller.create);
 router.get('/', authMiddleware(['administrador', 'advogado']), controller.list);
 router.put('/:id/status', authMiddleware(['administrador', 'advogado']), controller.updateStatus);
 router.post('/:id/converter', authMiddleware(['administrador', 'advogado']), controller.convert);
+router.post('/:id/accept', authMiddleware(['administrador', 'advogado']), controller.accept);
 router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);
 
 module.exports = router;

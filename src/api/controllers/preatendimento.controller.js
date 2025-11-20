@@ -38,7 +38,6 @@ class PreAtendimentoController {
       const { id } = req.params;
       const { data } = req.body;
       const adminId = req.user.uid;
-
       const result = await service.convert(id, data, adminId);
 
       res.status(200).json({
@@ -61,6 +60,43 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async accept(req, res) {
+    try {
+      const { id } = req.params;
+      // O body pode conter dados atualizados do formulário, se necessário
+      const result = await service.acceptAndCreateClient(id, req.body);
+      res.status(200).json(result); // Retorna { tempPassword, clientId }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateProposal(req, res) {
+    try {
+      const { id } = req.params;
+      const data = req.body;       
+      await service.updateProposal(id, data);
+      res.status(200).json({ message: 'Proposta atualizada.' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async finalize(req, res) {
+    try {
+      const { id } = req.params;
+      const { data } = req.body; // Dados completos atuais do lead
+      const adminId = req.user.uid;
+
+      const result = await service.finalizeCase(id, data, adminId);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+
 }
 
 module.exports = new PreAtendimentoController();
