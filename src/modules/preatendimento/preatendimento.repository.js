@@ -1,5 +1,6 @@
 const { db, auth } = require('../../config/firebase.config');
 const { FieldValue } = require('firebase-admin/firestore');
+
 const collection = db.collection('preatendimentos');
 const clientsCollection = db.collection('clients');
 const casesCollection = db.collection('processo');
@@ -8,7 +9,7 @@ class PreAtendimentoRepository {
   async create(data) {
     const docRef = await collection.add({
       ...data,
-      status: 'Pendente', // Status inicial
+      status: 'Pendente',
       createdAt: new Date()
     });
     return { id: docRef.id, ...data };
@@ -19,12 +20,34 @@ class PreAtendimentoRepository {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async acceptAndCreateClient(id, data) {
+  async updateStatus(id, status) {
+    await collection.doc(id).update({ status });
+  }
+
+  async delete(id) {
+    await collection.doc(id).delete();
+  }
+
+  // Método para salvar a proposta ou anotações
+  async updateProposal(id, data) {
+    await collection.doc(id).update(data);
+  }
+
+  // Método para adicionar arquivo (upload)
+  async addFile(id, fileData) {
+    await collection.doc(id).update({
+      adminFiles: FieldValue.arrayUnion(fileData)
+    });
+    return fileData;
+  }
+
+  // Método de Conversão
+  async convertToCase(id, data, adminId) {
     // 1. Gera senha
     const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
     let uid;
 
-    // 2. Cria Usuário no Auth
+    // 2. Cria ou busca usuário
     try {
       const userRecord = await auth.createUser({
         email: data.email,
@@ -35,71 +58,62 @@ class PreAtendimentoRepository {
       await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
     } catch (error) {
       if (error.code === 'auth/email-already-exists') {
-        const existingUser = await auth.getUserByEmail(data.email);
-        uid = existingUser.uid;
-        // Atualiza senha para garantir acesso
-        await auth.updateUser(uid, { password: tempPassword });
-      } else { throw error; }
+         const existingUser = await auth.getUserByEmail(data.email);
+         uid = existingUser.uid;
+         // Atualiza senha para garantir acesso
+         await auth.updateUser(uid, { password: tempPassword });
+      } else {
+        throw error;
+      }
     }
 
     const batch = db.batch();
 
-    // 3. Cria o Cliente no Firestore
+    // 3. Cliente
     const clientRef = clientsCollection.doc(uid);
-    batch.set(clientRef, {
+    const clientData = {
       name: data.nome, email: data.email, cpfCnpj: data.cpfCnpj,
       phone: data.telefone, address: data.endereco, status: 'ativo',
       createdAt: new Date(), convertedFrom: id
-    }, { merge: true });
+    };
+    batch.set(clientRef, clientData, { merge: true });
 
-    // 4. Atualiza o Pré-atendimento
+    // 4. Processo
+    const caseRef = casesCollection.doc();
+    const caseData = {
+      titulo: `Caso: ${data.categoria}`,
+      descricao: data.resumoProblema,
+      clientId: uid,
+      responsavelUid: adminId,
+      status: 'Em andamento',
+      area: data.categoria,
+      createdAt: new Date(),
+      urgencia: data.urgencia,
+      numeroProcesso: 'Aguardando Distribuição',
+      // Copia dados da negociação se existirem
+      valorAcordado: data.proposalValue || null,
+      assinatura: data.signature || null,
+      anexos: [...(data.clientFiles || []), ...(data.adminFiles || [])]
+    };
+    batch.set(caseRef, caseData);
+
+    // 5. Atualiza status
     const preRef = collection.doc(id);
-    batch.update(preRef, {
-      status: 'Em Negociacao',
-      clientId: uid, // Vincula o cliente criado ao pré-atendimento
-      proposalValue: null, // Campo para o valor
-      proposalStatus: 'pending', // pending, sent, accepted, rejected
-      clientFiles: [],
-      adminFiles: []
-    });
+    batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
 
     await batch.commit();
 
-    return { tempPassword, clientId: uid };
+    return { 
+      success: true, 
+      tempPassword: tempPassword,
+      clientId: uid,
+      caseId: caseRef.id
+    };
   }
+}
 
-  // Novo método para salvar proposta/negociação
-  async updateProposal(id, data) {
-    await collection.doc(id).update(data);
-  }
+module.exports = new PreAtendimentoRepository();
 
-  // Método Finalizar (Antigo convertToCase, agora simplificado)
-  async finalizeCase(id, preData, adminId) {
-    // Cria apenas o processo, pois o cliente já existe
-    const caseRef = casesCollection.doc();
-    await caseRef.set({
-      titulo: `Caso: ${preData.categoria}`,
-      descricao: preData.resumoProblema,
-      clientId: preData.clientId, // Já existe
-      responsavelUid: adminId,
-      status: 'Em andamento',
-      area: preData.categoria,
-      createdAt: new Date(),
-      urgencia: preData.urgencia,
-      numeroProcesso: 'Aguardando',
-      // Copia os arquivos da negociação para o processo final
-      anexos: [...(preData.clientFiles || []), ...(preData.adminFiles || [])],
-      valorAcordado: preData.proposalValue,
-      assinatura: preData.signature
-    });
-
-    await collection.doc(id).update({ status: 'Convertido', relatedCaseId: caseRef.id });
-    return { caseId: caseRef.id };
-  }
-
-  async delete(id) {
-    await collection.doc(id).delete();
-  }
   /*
     async convertToCase(id, data, adminId) {
       const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
@@ -168,14 +182,3 @@ class PreAtendimentoRepository {
       };
     }
   */
-
-  async addFile(id, fileData) {
-    // fileData: { url, public_id, nome, tipo }
-    await collection.doc(id).update({
-      adminFiles: FieldValue.arrayUnion(fileData)
-    });
-    return fileData;
-  }
-}
-
-module.exports = new PreAtendimentoRepository();

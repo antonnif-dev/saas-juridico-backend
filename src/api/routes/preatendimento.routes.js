@@ -10,11 +10,12 @@ router.post('/', controller.create);
 
 // Rotas Protegidas (Apenas Admin/Advogado)
 router.get('/', authMiddleware(['administrador', 'advogado']), controller.list);
+router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);
+// Rotas de Fluxo de Trabalho
 router.put('/:id/status', authMiddleware(['administrador', 'advogado']), controller.updateStatus);
 router.put('/:id/proposal', authMiddleware(['administrador', 'advogado']), controller.updateProposal);
 router.post('/:id/converter', authMiddleware(['administrador', 'advogado']), controller.convert);
 router.post('/:id/accept', authMiddleware(['administrador', 'advogado']), controller.accept);
 router.post('/:id/upload', authMiddleware(['administrador', 'advogado']), upload.single('documento'), controller.upload);
-router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);
 
 module.exports = router;

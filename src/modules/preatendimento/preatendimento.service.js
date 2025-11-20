@@ -10,7 +10,7 @@ class PreAtendimentoService {
   }
 
   async accept(id) {
-    return await repository.updateStatus(id, 'Em Análise');
+    return await repository.updateStatus(id, 'Em Negociacao');
   }
 
   async reject(id) {

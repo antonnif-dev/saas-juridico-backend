@@ -32,25 +32,39 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
-
+  /*
+    async convert(req, res) {
+      try {
+        const { id } = req.params;
+        const { data } = req.body;
+        const adminId = req.user.uid;
+        const result = await service.convert(id, data, adminId);
+  
+        res.status(200).json({
+          message: 'Convertido com sucesso!',
+          tempPassword: result.tempPassword,
+          clientId: result.clientId
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  */
   async convert(req, res) {
     try {
       const { id } = req.params;
       const { data } = req.body;
       const adminId = req.user.uid;
-      const result = await service.convert(id, data, adminId);
 
-      res.status(200).json({
-        message: 'Convertido com sucesso!',
-        tempPassword: result.tempPassword,
-        clientId: result.clientId
-      });
+      const result = await service.convert(id, data, adminId);
+      res.status(200).json(result);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: error.message });
     }
   }
-
+  /*  
   async delete(req, res) {
     try {
       const { id } = req.params;
@@ -60,26 +74,45 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
-
-  async accept(req, res) {
+*/
+  async delete(req, res) {
     try {
       const { id } = req.params;
-      // O body pode conter dados atualizados do formulário, se necessário
-      const result = await service.acceptAndCreateClient(id, req.body);
-      res.status(200).json(result); // Retorna { tempPassword, clientId }
+      await service.delete(id);
+      res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
+  async accept(req, res) {
+    try {
+      const { id } = req.params;
+      await service.accept(id);
+      res.status(200).json({ message: 'Aceito para negociação.' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+  /*
+    async updateProposal(req, res) {
+      try {
+        const { id } = req.params;
+        const data = req.body;
+        const adminId = req.user.uid;
+        const result = await service.convert(id, data, adminId);
+        await service.updateProposal(id, data);
+        res.status(200).json({ message: 'Proposta atualizada.' });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+  */
   async updateProposal(req, res) {
     try {
       const { id } = req.params;
-      const data = req.body;
-      const adminId = req.user.uid;
-      const result = await service.convert(id, data, adminId);
-      await service.updateProposal(id, data);
-      res.status(200).json({ message: 'Proposta atualizada.' });
+      await service.updateProposal(id, req.body);
+      res.status(200).json({ message: 'Atualizado.' });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
