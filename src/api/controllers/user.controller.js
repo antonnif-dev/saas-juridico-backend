@@ -68,7 +68,7 @@ class UserController {
       res.status(500).json({ message: 'Erro ao atualizar o perfil.', error: error.message });
     }
   }
-  
+
   async listAdvogados(req, res) {
     try {
       const users = await userService.listAdvogados();
@@ -96,6 +96,16 @@ class UserController {
     } catch (error) {
       console.error("!!! ERRO AO DELETAR ADVOGADO:", error);
       res.status(500).json({ message: 'Erro interno ao deletar usuário.' });
+    }
+  }
+
+  async uploadPhoto(req, res) {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'Nenhuma imagem enviada.' });
+      const result = await userService.uploadProfilePhoto(req.user.uid, req.file);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao enviar foto.', error: error.message });
     }
   }
 }

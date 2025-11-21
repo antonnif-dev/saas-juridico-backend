@@ -4,6 +4,8 @@ const userController = require('../controllers/user.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validator.middleware');
 const { z } = require('zod');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 const updateRoleSchema = z.object({
   body: z.object({
@@ -80,6 +82,13 @@ router.put(
   authMiddleware(),
   validate(updateSelfSchema),
   userController.updateMe
+);
+
+router.post(
+  '/me/photo',
+  authMiddleware(),
+  upload.single('photo'),
+  userController.uploadPhoto
 );
 
 module.exports = router;

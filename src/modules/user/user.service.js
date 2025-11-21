@@ -86,6 +86,30 @@ class UserService {
     await auth.deleteUser(userId);
     return { message: 'Usuário deletado com sucesso.' };
   }
+
+  async uploadProfilePhoto(userId, file) {
+    const cloudinary = require('../../config/cloudinary.config');
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `users/${userId}/profile`,
+          public_id: 'avatar',
+          overwrite: true,
+          transformation: [{ width: 500, height: 500, crop: "fill" }] // Padroniza tamanho
+        },
+        async (error, result) => {
+          if (error) return reject(error);
+
+          // Atualiza a URL no Firebase Auth para aparecer no currentUser do frontend
+          await auth.updateUser(userId, { photoURL: result.secure_url });
+
+          resolve({ photoUrl: result.secure_url });
+        }
+      );
+      uploadStream.end(file.buffer);
+    });
+  }
 }
 
 module.exports = new UserService();
