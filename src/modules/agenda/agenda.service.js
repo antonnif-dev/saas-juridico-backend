@@ -3,6 +3,8 @@ const { Timestamp } = require('firebase-admin/firestore');
 const agendaRepository = require('./agenda.repository');
 const { Client } = require("@upstash/qstash");
 
+const caseService = require('../case/case.service');
+
 // Inicializa o cliente do QStash com seu token do .env
 const qstashClient = new Client({
   token: process.env.QSTASH_TOKEN,
@@ -21,12 +23,24 @@ class AgendaService {
     // 1. Cria o compromisso no seu banco de dados
     const newItem = await agendaRepository.create(dataToSave);
 
-    // 2. Agenda a notificação por e-mail com o Upstash
+    // --- NOVO: GATILHO AUTOMÁTICO DE STATUS (AUDIÊNCIA) ---
+    // Se for uma Audiência vinculada a um processo, muda o status do processo automaticamente
+    if (itemData.tipo === 'Audiência' && itemData.processoId) {
+       try {
+         console.log(`Gatilho ativado: Atualizando processo ${itemData.processoId} para 'Aguardando Audiência'`);
+         await caseService.updateItem(itemData.processoId, { status: 'Aguardando Audiência' }, userId);
+       } catch (e) {
+         console.error("Erro ao atualizar status do processo via agenda:", e.message);
+         // Não paramos o fluxo aqui, apenas logamos o erro, pois o compromisso já foi criado.
+       }
+    }
+    // -------------------------------------------------------
+
+    // 2. Agenda a notificação por e-mail com o Upstash (SEU CÓDIGO ORIGINAL MANTIDO)
     try {
       const dataDoCompromisso = new Date(itemData.dataHora);
 
       // Mudei para 1 minuto antes para facilitar os testes. 
-      // Lembre-se de voltar para (24 * 60 * 60 * 1000) para 24h.
       const dataDaNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000);
       const agora = new Date().getTime();
 
@@ -42,8 +56,6 @@ class AgendaService {
           notBefore: Math.floor(dataDaNotificacao / 1000),
         });
 
-        // Opcional, mas recomendado: Salva o ID da mensagem agendada no compromisso.
-        // Isso nos permitirá cancelar a notificação se o evento for alterado.
         await agendaRepository.update(newItem.id, { qstashMessageId: messageId });
         console.log(`Notificação agendada com sucesso! Message ID: ${messageId}`);
       }

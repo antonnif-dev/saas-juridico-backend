@@ -13,6 +13,8 @@ const webhookRoutes = require('./api/routes/webhook.routes');
 const themeRoutes = require('./api/routes/theme.routes');
 const messageRoutes = require('./api/routes/message.routes');
 const preatendimentoRoutes = require('./api/routes/preatendimento.routes');
+const financialRoutes = require('./api/routes/financial.routes');
+const aiRoutes = require('./api/routes/ai.routes');
 
 const app = express();
 const corsOptions = {
@@ -49,6 +51,8 @@ app.use('/api/portal', portalRoutes);
 app.use('/api/theme', themeRoutes);
 app.use('/api/mensagens', messageRoutes);
 app.use('/api/preatendimento', preatendimentoRoutes);
+app.use('/api/financial', financialRoutes);
+app.use('/api/ai', aiRoutes);
 app.get('/', (req, res) => {
   res.status(200).send({ message: 'API do SaaS Jurídico no ar!' });
 });
