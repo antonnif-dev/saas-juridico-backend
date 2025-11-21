@@ -1,4 +1,5 @@
 const { auth } = require('../../config/firebase.config');
+const usersCollection = db.collection('users');
 
 class UserService {
   /**
@@ -29,6 +30,54 @@ class UserService {
       role: 'advogado'
     };
     return cleanUser;
+  }
+
+  async getMe(uid) {
+    const userRecord = await auth.getUser(uid);    
+    let doc = await usersCollection.doc(uid).get();    
+    if (!doc.exists) {
+      const clientsCollection = db.collection('clients');
+      doc = await clientsCollection.doc(uid).get();
+    }
+    const firestoreData = doc.exists ? doc.data() : {};
+    return {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName,
+      photoUrl: userRecord.photoURL,
+      role: userRecord.customClaims?.role,
+      cpfCnpj: firestoreData.cpfCnpj || '',
+      tipoPessoa: firestoreData.tipoPessoa || 'Física',
+      phone: firestoreData.phone || ''
+    };
+  }
+
+  async updateMe(uid, data) {
+    const { name, email, password, cpfCnpj, tipoPessoa, phone } = data;
+    const updateData = {};
+    if (name) updateData.displayName = name;
+    if (email) updateData.email = email;
+    if (password) updateData.password = password;
+    
+    if (Object.keys(updateData).length > 0) {
+      await auth.updateUser(uid, updateData);
+    }
+
+    const userRecord = await auth.getUser(uid);
+    const isClient = userRecord.customClaims?.role === 'cliente';    
+    const collectionTarget = isClient ? db.collection('clients') : usersCollection;
+    const firestoreData = {
+      updatedAt: new Date()
+    };
+    if (cpfCnpj) firestoreData.cpfCnpj = cpfCnpj;
+    if (tipoPessoa) firestoreData.tipoPessoa = tipoPessoa;
+    if (phone) firestoreData.phone = phone;
+    if (name) firestoreData.name = name; 
+    if (email) firestoreData.email = email;
+
+    await collectionTarget.doc(uid).set(firestoreData, { merge: true });
+
+    return { uid, ...data };
   }
 
   async updateUser(uid, updates) {
