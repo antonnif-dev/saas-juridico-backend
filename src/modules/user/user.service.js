@@ -85,46 +85,48 @@ class UserService {
   }
 
   async updateMe(uid, data) {
-    const { name, email, password, cpfCnpj, tipoPessoa, phone } = data;
+    const {
+      name, email, password,
+      cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco
+    } = data;
 
-    // 1. Busca dados atuais para comparar
+    // 1. Auth (Login)
     const currentUserRecord = await auth.getUser(uid);
-
-    // 2. Prepara atualização do Auth (Login)
     const updateData = {};
 
     if (name) updateData.displayName = name;
+    if (email && email !== currentUserRecord.email) updateData.email = email;
+    if (password && password.trim().length >= 6) updateData.password = password;
 
-    // SÓ tenta atualizar o email se ele for DIFERENTE do atual
-    if (email && email !== currentUserRecord.email) {
-      updateData.email = email;
-    }
-
-    // SÓ atualiza senha se ela foi enviada e não está vazia
-    if (password && password.trim().length > 0) {
-      updateData.password = password;
-    }
-
-    // Se houver algo para atualizar no Auth, envia
     if (Object.keys(updateData).length > 0) {
       await auth.updateUser(uid, updateData);
     }
 
-    // 3. Atualiza Firestore (Dados extras)
+    // 2. Firestore (Dados)
     const isClient = currentUserRecord.customClaims?.role === 'cliente';
-    const collectionTarget = isClient ? db.collection('clients') : usersCollection;
+
+    // Define explicitamente onde salvar
+    const targetRef = isClient
+      ? db.collection('clients').doc(uid)
+      : db.collection('users').doc(uid);
 
     const firestoreData = { updatedAt: new Date() };
 
-    // Atualiza campos apenas se vierem preenchidos (evita apagar dados)
+    // Mapeia todos os campos novos para o objeto de salvamento
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
     if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
     if (phone !== undefined) firestoreData.phone = phone;
+    if (oab !== undefined) firestoreData.oab = oab;
+    if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
+    if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
+    if (endereco !== undefined) firestoreData.endereco = endereco;
+
+    // Atualiza campos básicos também para manter sincronia
     if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
 
-    // 'merge: true' garante que o documento seja criado se não existir
-    await collectionTarget.doc(uid).set(firestoreData, { merge: true });
+    // Salva com merge (cria se não existir, atualiza se existir)
+    await targetRef.set(firestoreData, { merge: true });
 
     return { uid, ...data };
   }
