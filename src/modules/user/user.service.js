@@ -43,10 +43,10 @@ class UserService {
    */
   async getMe(uid) {
     const userRecord = await auth.getUser(uid);
-    
+
     // Tenta buscar na coleção de equipe
     let doc = await db.collection('users').doc(uid).get();
-    
+
     // Se não achar, tenta na coleção de clientes
     if (!doc.exists) {
       doc = await db.collection('clients').doc(uid).get();
@@ -72,46 +72,53 @@ class UserService {
   }
 
   async updateMe(uid, data) {
-    const { name, email, password, cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco } = data;
+    try {
+      // 1. Busca usuário no Auth para checar permissão/role
+      const userRecord = await auth.getUser(uid);
 
-    // 1. Busca dados atuais no Auth
-    const userRecord = await auth.getUser(uid);
+      // 2. Atualização do Auth (Email/Senha/Nome)
+      const authUpdates = {};
+      if (data.name) authUpdates.displayName = data.name;
+      if (data.email && data.email !== userRecord.email) authUpdates.email = data.email;
+      if (data.password) authUpdates.password = data.password;
 
-    // 2. Atualiza Auth (Login)
-    const updateData = {};
-    if (name) updateData.displayName = name;
-    // Verifica se o email mudou comparando com userRecord
-    if (email && email !== userRecord.email) updateData.email = email;
-    if (password && password.trim().length >= 6) updateData.password = password;
-    
-    if (Object.keys(updateData).length > 0) {
-      await auth.updateUser(uid, updateData);
+      if (Object.keys(authUpdates).length > 0) {
+        await auth.updateUser(uid, authUpdates);
+      }
+
+      // 3. Atualização do Firestore (Dados de Perfil)
+      const isClient = userRecord.customClaims?.role === 'cliente';
+
+      // Seleciona a coleção correta
+      const collectionName = isClient ? 'clients' : 'users';
+
+      // Monta o objeto APENAS com o que veio definido
+      // O uso de '|| null' evita o erro de 'undefined' do Firestore
+      const firestoreData = {
+        updatedAt: new Date(),
+        name: data.name || null,
+        email: data.email || null,
+        cpfCnpj: data.cpfCnpj || null,
+        tipoPessoa: data.tipoPessoa || 'Física',
+        phone: data.phone || null,
+        oab: data.oab || null,
+        dataNascimento: data.dataNascimento || null,
+        estadoCivil: data.estadoCivil || null,
+        endereco: data.endereco || null
+      };
+
+      // Remove chaves nulas para não gravar lixo (opcional, mas limpo)
+      Object.keys(firestoreData).forEach(key => firestoreData[key] === null && delete firestoreData[key]);
+
+      // Salva usando db.collection direto
+      await db.collection(collectionName).doc(uid).set(firestoreData, { merge: true });
+
+      return { uid, ...data };
+
+    } catch (error) {
+      console.error("ERRO NO UPDATE_ME:", error); // Isso vai aparecer no log da Vercel se der erro
+      throw error; // Repassa o erro para o controller
     }
-
-    // 3. Atualiza Firestore (Dados)
-    // Verifica o role usando userRecord
-    const isClient = userRecord.customClaims?.role === 'cliente';
-    
-    // Define a coleção explicitamente aqui
-    const collectionRef = isClient ? db.collection('clients') : db.collection('users');
-
-    const firestoreData = { updatedAt: new Date() };
-    
-    // Mapeamento dos campos
-    if (name) firestoreData.name = name;
-    if (email) firestoreData.email = email;
-    if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
-    if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
-    if (phone !== undefined) firestoreData.phone = phone;
-    if (oab !== undefined) firestoreData.oab = oab;
-    if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
-    if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
-    if (endereco !== undefined) firestoreData.endereco = endereco;
-
-    // Salva no documento correto
-    await collectionRef.doc(uid).set(firestoreData, { merge: true });
-
-    return { uid, ...data };
   }
 
   async updateAdvogado(userId, dataToUpdate) {
@@ -122,14 +129,14 @@ class UserService {
     if (name) authUpdates.displayName = name;
     if (email) authUpdates.email = email;
     if (password && password.trim().length >= 6) authUpdates.password = password;
-    
+
     if (Object.keys(authUpdates).length > 0) {
       await auth.updateUser(userId, authUpdates);
     }
 
     // 2. Atualiza Firestore (Sempre na coleção users para advogados)
     const firestoreData = { updatedAt: new Date() };
-    
+
     if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
