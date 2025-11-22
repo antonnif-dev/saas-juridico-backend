@@ -35,12 +35,14 @@ const updateMovimentacaoSchema = z.object({
 });
 
 router.use(authMiddleware());
+router.use(authMiddleware(['administrador', 'advogado']));
 router.post('/', authMiddleware(['administrador', 'advogado']), validate(createCaseSchema), caseController.create);
 router.get('/:id', authMiddleware(['administrador', 'advogado', 'cliente']), caseController.getById);
 router.get('/', caseController.list);
 router.get('/:id', caseController.getById);
 router.put('/:id', caseController.update);
 router.delete('/:id', caseController.delete);
+router.post('/', caseController.create);
 
 router.post(
   '/:id/documentos',
