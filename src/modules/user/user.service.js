@@ -13,7 +13,7 @@ class UserService {
     console.log(`Perfil '${role}' atribuído ao usuário ${uid}`);
     return { message: `Perfil '${role}' atribuído com sucesso.` };
   }
-  
+
   async createAdvogado(userData) {
     // Agora desestruturamos todos os novos campos
     const {
@@ -167,22 +167,45 @@ class UserService {
     return advogados;
   }
   async updateAdvogado(userId, dataToUpdate) {
-    const { name, email } = dataToUpdate;
+    const {
+      name, email, password,
+      cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco
+    } = dataToUpdate;
 
-    const updatedUser = await auth.updateUser(userId, {
-      displayName: name,
-      email: email,
-    });
+    const authUpdates = {};
+    if (name) authUpdates.displayName = name;
+    if (email) authUpdates.email = email;
+    if (password && password.trim().length >= 6) authUpdates.password = password;
+
+    if (Object.keys(authUpdates).length > 0) {
+      await auth.updateUser(userId, authUpdates);
+    }
+
+    const firestoreData = {
+      updatedAt: new Date()
+    };
+
+    if (name) firestoreData.name = name;
+    if (email) firestoreData.email = email;
+    if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
+    if (oab !== undefined) firestoreData.oab = oab;
+    if (phone !== undefined) firestoreData.phone = phone;
+    if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
+    if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
+    if (endereco !== undefined) firestoreData.endereco = endereco;
+
+    await db.collection('users').doc(userId).set(firestoreData, { merge: true });
 
     return {
-      uid: updatedUser.uid,
-      email: updatedUser.email,
-      name: updatedUser.displayName,
+      uid: userId,
+      ...dataToUpdate
     };
   }
+
   async deleteAdvogado(userId) {
     await auth.deleteUser(userId);
-    return { message: 'Usuário deletado com sucesso.' };
+    await db.collection('users').doc(userId).delete();
+    return { message: 'Usuário e dados deletados com sucesso.' };
   }
 
   async uploadProfilePhoto(userId, file) {
