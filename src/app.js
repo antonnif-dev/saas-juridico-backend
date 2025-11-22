@@ -17,6 +17,7 @@ const financialRoutes = require('./api/routes/financial.routes');
 const aiRoutes = require('./api/routes/ai.routes');
 
 const app = express();
+app.set('trust proxy', 1);
 const corsOptions = {
   origin: ['http://localhost:5173', // A porta EXATA do seu frontend Vite
   'https://saas-juridico-frontend.vercel.app'], // Adicionamos a URL de produção
