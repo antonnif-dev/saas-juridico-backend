@@ -71,33 +71,33 @@ class UserService {
     };
   }
 
-  /**
-   * ATUALIZAÇÃO DO PRÓPRIO PERFIL (A correção do erro 500 está aqui)
-   */
   async updateMe(uid, data) {
     const { name, email, password, cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco } = data;
 
-    const currentUserRecord = await auth.getUser(uid);
-    
-    // 1. Atualiza Auth
+    // 1. Busca dados atuais no Auth
+    const userRecord = await auth.getUser(uid);
+
+    // 2. Atualiza Auth (Login)
     const updateData = {};
     if (name) updateData.displayName = name;
-    if (email && email !== currentUserRecord.email) updateData.email = email;
+    // Verifica se o email mudou comparando com userRecord
+    if (email && email !== userRecord.email) updateData.email = email;
     if (password && password.trim().length >= 6) updateData.password = password;
-
+    
     if (Object.keys(updateData).length > 0) {
       await auth.updateUser(uid, updateData);
     }
 
-    // 2. Atualiza Firestore
-    const isClient = currentUserRecord.customClaims?.role === 'cliente';
+    // 3. Atualiza Firestore (Dados)
+    // Verifica o role usando userRecord
+    const isClient = userRecord.customClaims?.role === 'cliente';
     
-    // CORREÇÃO: Define a coleção explicitamente aqui dentro
-    const collectionName = isClient ? 'clients' : 'users';
-    
+    // Define a coleção explicitamente aqui
+    const collectionRef = isClient ? db.collection('clients') : db.collection('users');
+
     const firestoreData = { updatedAt: new Date() };
     
-    // Mapeia os campos apenas se existirem (para não apagar dados com undefined)
+    // Mapeamento dos campos
     if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
@@ -108,19 +108,16 @@ class UserService {
     if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
     if (endereco !== undefined) firestoreData.endereco = endereco;
 
-    // Usa .set com merge: true. Isso cria o documento se ele não existir (corrigindo o problema do Admin sem dados)
-    await db.collection(collectionName).doc(uid).set(firestoreData, { merge: true });
+    // Salva no documento correto
+    await collectionRef.doc(uid).set(firestoreData, { merge: true });
 
     return { uid, ...data };
   }
 
-  /**
-   * ATUALIZAÇÃO DE ADVOGADO (PELO ADMIN)
-   */
   async updateAdvogado(userId, dataToUpdate) {
     const { name, email, password, cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco } = dataToUpdate;
 
-    // 1. Auth
+    // 1. Atualiza Auth
     const authUpdates = {};
     if (name) authUpdates.displayName = name;
     if (email) authUpdates.email = email;
@@ -130,7 +127,7 @@ class UserService {
       await auth.updateUser(userId, authUpdates);
     }
 
-    // 2. Firestore (Sempre users)
+    // 2. Atualiza Firestore (Sempre na coleção users para advogados)
     const firestoreData = { updatedAt: new Date() };
     
     if (name) firestoreData.name = name;
@@ -143,6 +140,7 @@ class UserService {
     if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
     if (endereco !== undefined) firestoreData.endereco = endereco;
 
+    // Usa db.collection('users') explicitamente
     await db.collection('users').doc(userId).set(firestoreData, { merge: true });
 
     return { uid: userId, ...dataToUpdate };
