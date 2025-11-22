@@ -85,6 +85,7 @@ class UserService {
   }
 
   async updateMe(uid, data) {
+    console.log(">>> DADOS RECEBIDOS NO SERVICE (updateMe):", JSON.stringify(data, null, 2));
     const {
       name, email, password,
       cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco
