@@ -13,44 +13,14 @@ class UserService {
     console.log(`Perfil '${role}' atribuído ao usuário ${uid}`);
     return { message: `Perfil '${role}' atribuído com sucesso.` };
   }
-  /*
-    async createAdvogado(userData) {
-      const { name, email, password } = userData;
   
-      // 1. Cria o usuário no Firebase Authentication
-      const userRecord = await auth.createUser({
-        email: email,
-        password: password,
-        displayName: name,
-      });
-  
-      // 2. Define o Custom Claim (o perfil)
-      await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
-  
-      // 3. CRIA O DOCUMENTO NO FIRESTORE (A peça que faltava)
-      // Isso garante que o usuário já tenha dados ao logar pela primeira vez
-      await usersCollection.doc(userRecord.uid).set({
-        name: name,
-        email: email,
-        role: 'advogado',
-        createdAt: new Date(),
-        // Inicializa campos vazios para evitar erros no frontend
-        cpfCnpj: '',
-        phone: '',
-        tipoPessoa: 'Física',
-        status: 'ativo'
-      });
-  
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        name: userRecord.displayName,
-        role: 'advogado'
-      };
-    }*/
-
   async createAdvogado(userData) {
-    const { name, email, password } = userData;
+    // Agora desestruturamos todos os novos campos
+    const {
+      name, email, password,
+      oab, dataNascimento, estadoCivil, telefone,
+      endereco // Esperamos que venha um objeto { rua, numero, bairro... }
+    } = userData;
 
     // 1. Cria o Login
     const userRecord = await auth.createUser({
@@ -62,17 +32,28 @@ class UserService {
     // 2. Define a Permissão
     await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
 
-    // 3. Salva na Coleção 'users' (Manual ou Automática)
-    // Usamos 'set' para criar o documento com o ID igual ao UID do login
+    // 3. Salva a Ficha Completa no Firestore
     await db.collection('users').doc(userRecord.uid).set({
       name: name,
       email: email,
       role: 'advogado',
-      tipoPessoa: 'Física', // Padrão para evitar erro no front
-      cpfCnpj: '',          // Padrão
-      phone: '',            // Padrão
       status: 'ativo',
-      createdAt: new Date()
+      createdAt: new Date(),
+
+      // Novos Campos
+      oab: oab || '',
+      dataNascimento: dataNascimento || '',
+      estadoCivil: estadoCivil || '',
+      phone: telefone || '', // Padronizando como 'phone' para bater com o front
+
+      // Endereço (salva o objeto completo ou vazio)
+      endereco: endereco || {
+        cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: ''
+      },
+
+      // A imagem será vazia no início. O advogado faz o upload depois no "Meu Perfil"
+      photoUrl: '',
+      tipoPessoa: 'Física'
     });
 
     return {
