@@ -2,37 +2,48 @@ const { auth, db } = require('../../config/firebase.config');
 
 class UserService {
 
+  // --- HELPER: Limpa campos undefined do endereço para não quebrar o Firestore ---
+  _cleanAddress(addr) {
+    if (!addr) return null;
+    return {
+      cep: addr.cep || '',
+      rua: addr.rua || '',
+      numero: addr.numero || '',
+      complemento: addr.complemento || '',
+      bairro: addr.bairro || '',
+      cidade: addr.cidade || '',
+      estado: addr.estado || ''
+    };
+  }
+
   /**
    * CRIAÇÃO DE ADVOGADO (Admin)
    */
   async createAdvogado(userData) {
     const { name, email, password, oab, dataNascimento, estadoCivil, telefone, endereco } = userData;
 
-    // 1. Auth
     const userRecord = await auth.createUser({
       email,
       password,
       displayName: name,
     });
 
-    // 2. Claims
     await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
 
-    // 3. Firestore (Uso direto de db.collection para evitar erros)
+    // Salva no Firestore (Coleção 'users')
     await db.collection('users').doc(userRecord.uid).set({
       name,
       email,
-      role: 'advogado',
+      role: 'advogado', // Aqui definimos a distinção
       status: 'ativo',
       createdAt: new Date(),
-      // Campos extras com valores padrão seguros
       cpfCnpj: '',
       phone: telefone || '',
       oab: oab || '',
       dataNascimento: dataNascimento || '',
       estadoCivil: estadoCivil || '',
       tipoPessoa: 'Física',
-      endereco: endereco || { cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' }
+      endereco: this._cleanAddress(endereco) // Usa o helper para limpar
     });
 
     return { uid: userRecord.uid, email, name, role: 'advogado' };
@@ -43,11 +54,11 @@ class UserService {
    */
   async getMe(uid) {
     const userRecord = await auth.getUser(uid);
-
-    // Tenta buscar na coleção de equipe
+    
+    // 1. Tenta buscar em 'users' (Equipe: Admin/Advogado)
     let doc = await db.collection('users').doc(uid).get();
-
-    // Se não achar, tenta na coleção de clientes
+    
+    // 2. Se não achar, tenta em 'clients' (Clientes)
     if (!doc.exists) {
       doc = await db.collection('clients').doc(uid).get();
     }
@@ -59,8 +70,7 @@ class UserService {
       email: userRecord.email,
       name: userRecord.displayName,
       photoUrl: userRecord.photoURL,
-      role: userRecord.customClaims?.role,
-      // Retorna dados do banco ou strings vazias
+      role: userRecord.customClaims?.role || 'indefinido', // Proteção contra role vazia
       cpfCnpj: data.cpfCnpj || '',
       tipoPessoa: data.tipoPessoa || 'Física',
       phone: data.phone || '',
@@ -71,72 +81,74 @@ class UserService {
     };
   }
 
+  /**
+   * ATUALIZAÇÃO DO PRÓPRIO PERFIL
+   */
   async updateMe(uid, data) {
     try {
-      // 1. Busca usuário no Auth para checar permissão/role
+      const { name, email, password, cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco } = data;
+
+      // 1. Auth
       const userRecord = await auth.getUser(uid);
+      const updateData = {};
+      if (name) updateData.displayName = name;
+      if (email && email !== userRecord.email) updateData.email = email;
+      if (password && password.trim().length >= 6) updateData.password = password;
 
-      // 2. Atualização do Auth (Email/Senha/Nome)
-      const authUpdates = {};
-      if (data.name) authUpdates.displayName = data.name;
-      if (data.email && data.email !== userRecord.email) authUpdates.email = data.email;
-      if (data.password) authUpdates.password = data.password;
-
-      if (Object.keys(authUpdates).length > 0) {
-        await auth.updateUser(uid, authUpdates);
+      if (Object.keys(updateData).length > 0) {
+        await auth.updateUser(uid, updateData);
       }
 
-      // 3. Atualização do Firestore (Dados de Perfil)
+      // 2. Firestore
       const isClient = userRecord.customClaims?.role === 'cliente';
-
-      // Seleciona a coleção correta
       const collectionName = isClient ? 'clients' : 'users';
+      
+      // Monta o objeto de dados manualmente para evitar 'undefined'
+      const firestoreData = { updatedAt: new Date() };
 
-      // Monta o objeto APENAS com o que veio definido
-      // O uso de '|| null' evita o erro de 'undefined' do Firestore
-      const firestoreData = {
-        updatedAt: new Date(),
-        name: data.name || null,
-        email: data.email || null,
-        cpfCnpj: data.cpfCnpj || null,
-        tipoPessoa: data.tipoPessoa || 'Física',
-        phone: data.phone || null,
-        oab: data.oab || null,
-        dataNascimento: data.dataNascimento || null,
-        estadoCivil: data.estadoCivil || null,
-        endereco: data.endereco || null
-      };
+      if (name) firestoreData.name = name;
+      if (email) firestoreData.email = email;
+      if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
+      if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
+      if (phone !== undefined) firestoreData.phone = phone;
+      if (oab !== undefined) firestoreData.oab = oab;
+      if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
+      if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
+      
+      // Limpeza crítica do endereço
+      if (endereco) {
+        firestoreData.endereco = this._cleanAddress(endereco);
+      }
 
-      // Remove chaves nulas para não gravar lixo (opcional, mas limpo)
-      Object.keys(firestoreData).forEach(key => firestoreData[key] === null && delete firestoreData[key]);
-
-      // Salva usando db.collection direto
+      // Salva com merge
       await db.collection(collectionName).doc(uid).set(firestoreData, { merge: true });
 
       return { uid, ...data };
 
     } catch (error) {
-      console.error("ERRO NO UPDATE_ME:", error); // Isso vai aparecer no log da Vercel se der erro
-      throw error; // Repassa o erro para o controller
+      console.error("ERRO CRÍTICO NO UPDATE_ME:", error);
+      throw error;
     }
   }
 
-  async updateAdvogado(userId, dataToUpdate) {
-    const { name, email, password, cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco } = dataToUpdate;
+  /**
+   * ATUALIZAÇÃO DE ADVOGADO (Admin)
+   */
+  async updateAdvogado(userId, data) {
+    const { name, email, password, cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco } = data;
 
-    // 1. Atualiza Auth
+    // 1. Auth
     const authUpdates = {};
     if (name) authUpdates.displayName = name;
     if (email) authUpdates.email = email;
     if (password && password.trim().length >= 6) authUpdates.password = password;
-
+    
     if (Object.keys(authUpdates).length > 0) {
       await auth.updateUser(userId, authUpdates);
     }
 
-    // 2. Atualiza Firestore (Sempre na coleção users para advogados)
+    // 2. Firestore
     const firestoreData = { updatedAt: new Date() };
-
     if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
@@ -145,15 +157,16 @@ class UserService {
     if (oab !== undefined) firestoreData.oab = oab;
     if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
     if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
-    if (endereco !== undefined) firestoreData.endereco = endereco;
+    
+    if (endereco) {
+      firestoreData.endereco = this._cleanAddress(endereco);
+    }
 
-    // Usa db.collection('users') explicitamente
     await db.collection('users').doc(userId).set(firestoreData, { merge: true });
 
-    return { uid: userId, ...dataToUpdate };
+    return { uid: userId, ...data };
   }
 
-  // Outros métodos (listagem, delete, upload)
   async listAdvogados() {
     const listUsersResult = await auth.listUsers(1000);
     return listUsersResult.users
@@ -166,20 +179,20 @@ class UserService {
     await db.collection('users').doc(userId).delete();
     return { message: 'Deletado com sucesso.' };
   }
-
+  
   async uploadProfilePhoto(userId, file) {
-    const cloudinary = require('../../config/cloudinary.config');
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: `users/${userId}/profile`, public_id: 'avatar', overwrite: true, transformation: [{ width: 500, height: 500, crop: "fill" }] },
-        async (error, result) => {
-          if (error) return reject(error);
-          await auth.updateUser(userId, { photoURL: result.secure_url });
-          resolve({ photoUrl: result.secure_url });
-        }
-      );
-      uploadStream.end(file.buffer);
-    });
+     const cloudinary = require('../../config/cloudinary.config');
+     return new Promise((resolve, reject) => {
+       const uploadStream = cloudinary.uploader.upload_stream(
+         { folder: `users/${userId}/profile`, public_id: 'avatar', overwrite: true, transformation: [{ width: 500, height: 500, crop: "fill" }] },
+         async (error, result) => {
+           if (error) return reject(error);
+           await auth.updateUser(userId, { photoURL: result.secure_url });
+           resolve({ photoUrl: result.secure_url });
+         }
+       );
+       uploadStream.end(file.buffer);
+     });
   }
 }
 
