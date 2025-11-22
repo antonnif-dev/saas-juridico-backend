@@ -53,7 +53,10 @@ class CaseController {
       const updatedCase = await caseService.updateCase(id, req.body, req.user.uid);
       res.status(200).json(updatedCase);
     } catch (error) {
-      res.status(404).json({ message: error.message });
+      if (error.message.includes('não encontrado') || error.message.includes('permissão')) {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: 'Erro ao atualizar processo.', error: error.message });
     }
   }
 

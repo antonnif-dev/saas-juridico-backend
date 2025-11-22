@@ -51,23 +51,19 @@ class CaseService {
     if (!caseDoc) {
       throw new Error('Processo não encontrado.');
     }
-    // Permite se for Admin/Advogado
-    if (user.role === 'administrador' || user.role === 'advogado') {
-      // Opcional: Se quiser restringir que advogado só veja os seus:
-      // if (caseDoc.responsavelUid !== user.uid && caseDoc.createdBy !== user.uid) throw ...
-      return caseDoc;
-    }
-    // Permite se for Cliente dono do processo
-    if (user.role === 'cliente' && caseDoc.clientId === user.clientId) {
-      return caseDoc;
-    }
-    throw new Error('Acesso não permitido a este processo.');
-  }
+    const userData = typeof user === 'string' ? { uid: user, role: 'advogado' } : user;
 
-  async updateCase(caseId, dataToUpdate, userId) {
-    // Primeiro, busca o processo para garantir que o usuário tem permissão
-    await this.getCaseById(caseId, userId);
-    return await caseRepository.update(caseId, dataToUpdate);
+    if (userData.role === 'administrador' || userData.role === 'advogado') {
+      const isOwner = (caseDoc.responsavelUid === userData.uid) || (caseDoc.createdBy === userData.uid);
+
+      return caseDoc;
+    }
+
+    if (userData.role === 'cliente' && caseDoc.clientId === userData.clientId) {
+      return caseDoc;
+    }
+
+    throw new Error('Acesso não permitido a este processo.');
   }
 
   async deleteCase(caseId, userId) {
