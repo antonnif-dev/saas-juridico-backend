@@ -15,10 +15,15 @@ class CaseService {
   async createCase(caseData, userId) {
     const dataToSave = {
       ...caseData,
-      createdBy: userId,
+      createdBy: userId,       // Legado
+      responsavelUid: userId,  // Novo Padrão
+
       createdAt: new Date(),
       documentos: [],
       movimentacoes: [],
+
+      status: caseData.status || 'Em andamento',
+      urgencia: caseData.urgencia || 'Média'
     };
 
     const newCase = await caseRepository.create(dataToSave);
@@ -36,25 +41,23 @@ class CaseService {
     console.log('--- 4. Retornando do Service para o Controller ---');
     return result;
   }
-  /*
-    async getCaseById(caseId, userId) {
-      const caseDoc = await caseRepository.findById(caseId);
-      // VERIFICAÇÃO DE PERMISSÃO: O usuário pode ver este processo?
-      if (!caseDoc || caseDoc.createdBy !== userId) {
-        throw new Error('Processo não encontrado ou acesso não permitido.');
-      }
-      return caseDoc;
-    }
-  */
+
+  async listItemsForUser(userId) {
+    return this.getCasesForUser(userId);
+  }
 
   async getCaseById(caseId, user) {
     const caseDoc = await caseRepository.findById(caseId);
     if (!caseDoc) {
       throw new Error('Processo não encontrado.');
     }
+    // Permite se for Admin/Advogado
     if (user.role === 'administrador' || user.role === 'advogado') {
+      // Opcional: Se quiser restringir que advogado só veja os seus:
+      // if (caseDoc.responsavelUid !== user.uid && caseDoc.createdBy !== user.uid) throw ...
       return caseDoc;
     }
+    // Permite se for Cliente dono do processo
     if (user.role === 'cliente' && caseDoc.clientId === user.clientId) {
       return caseDoc;
     }
@@ -183,7 +186,19 @@ class CaseService {
     return documento;
   }
 
+  async listItemsForUser(userId) {
+    return this.getCasesForUser(userId);
+  }
 
+  // O controller chama 'updateItem', nós redirecionamos para o seu 'updateCase'
+  async updateItem(caseId, data, userId) {
+    return this.updateCase(caseId, data, userId);
+  }
+
+  // O controller chama 'deleteItem', nós redirecionamos para o seu 'deleteCase'
+  async deleteItem(caseId, userId) {
+    return this.deleteCase(caseId, userId);
+  }
 }
 
 module.exports = new CaseService();

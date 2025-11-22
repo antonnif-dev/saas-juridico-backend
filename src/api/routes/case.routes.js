@@ -36,10 +36,12 @@ const updateMovimentacaoSchema = z.object({
 
 router.use(authMiddleware());
 router.post('/', authMiddleware(['administrador', 'advogado']), validate(createCaseSchema), caseController.create);
-router.get('/', caseController.list);
 router.get('/:id', authMiddleware(['administrador', 'advogado', 'cliente']), caseController.getById);
+router.get('/', caseController.list);
+router.get('/:id', caseController.getById);
 router.put('/:id', caseController.update);
 router.delete('/:id', caseController.delete);
+
 router.post(
   '/:id/documentos',
   upload.single('documento'),
@@ -79,8 +81,9 @@ router.post(
 
 router.get(
   '/:id/documentos/:docId',
-  authMiddleware(['administrador', 'advogado', 'cliente']), // Permite que todos vejam
+  authMiddleware(['administrador', 'advogado', 'cliente']),
   caseController.downloadDocument
 );
+
 
 module.exports = router;

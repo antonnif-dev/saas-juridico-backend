@@ -9,20 +9,26 @@ class CaseRepository {
   }
 
   async findAllByOwner(userId) {
-    const snapshot = await casesCollection.where('responsavelUid', '==', userId).get();    
+    const snapshot = await casesCollection.where('responsavelUid', '==', userId).get();
     if (snapshot.empty) {
-       const legacySnapshot = await casesCollection.where('createdBy', '==', userId).get();
-       if (legacySnapshot.empty) return [];
-       return legacySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }    
+      const legacySnapshot = await casesCollection.where('createdBy', '==', userId).get();
+      if (legacySnapshot.empty) return [];
+      return legacySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
+  /*
+    async findById(caseId) {
+      const doc = await casesCollection.doc(caseId).get();
+      if (!doc.exists) {
+        return null;
+      }
+      return { id: doc.id, ...doc.data() };
+    }*/
 
-  async findById(caseId) {
-    const doc = await casesCollection.doc(caseId).get();
-    if (!doc.exists) {
-      return null;
-    }
+  async findById(id) {
+    const doc = await collection.doc(id).get();
+    if (!doc.exists) return null;
     return { id: doc.id, ...doc.data() };
   }
 
@@ -33,14 +39,23 @@ class CaseRepository {
     }
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
+  /*
+    async update(caseId, dataToUpdate) {
+      await casesCollection.doc(caseId).update(dataToUpdate);
+      return { id: caseId, ...dataToUpdate };
+    }
+  
+    async delete(caseId) {
+      await casesCollection.doc(caseId).delete();
+    }*/
 
-  async update(caseId, dataToUpdate) {
-    await casesCollection.doc(caseId).update(dataToUpdate);
-    return { id: caseId, ...dataToUpdate };
+  async update(id, data) {
+    await collection.doc(id).update(data);
+    return { id, ...data };
   }
 
-  async delete(caseId) {
-    await casesCollection.doc(caseId).delete();
+  async delete(id) {
+    await collection.doc(id).delete();
   }
 
   async findAllByClientId(clientId) {
