@@ -40,29 +40,26 @@ class UserService {
       status: 'ativo',
       createdAt: new Date(),
 
-      // Novos Campos
+      cpfCnpj: '',
+      phone: telefone || '',
       oab: oab || '',
       dataNascimento: dataNascimento || '',
       estadoCivil: estadoCivil || '',
-      phone: telefone || '', // Padronizando como 'phone' para bater com o front
+      tipoPessoa: 'Física',
+      photoUrl: '',
 
-      // Endereço (salva o objeto completo ou vazio)
       endereco: endereco || {
         cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: ''
-      },
-
-      // A imagem será vazia no início. O advogado faz o upload depois no "Meu Perfil"
-      photoUrl: '',
-      tipoPessoa: 'Física'
+      }
     });
 
     return {
       uid: userRecord.uid,
       email: userRecord.email,
+      name: userRecord.displayName,
       role: 'advogado'
     };
   }
-
 
   async getMe(uid) {
     const userRecord = await auth.getUser(uid);
@@ -80,18 +77,20 @@ class UserService {
       role: userRecord.customClaims?.role,
       cpfCnpj: firestoreData.cpfCnpj || '',
       tipoPessoa: firestoreData.tipoPessoa || 'Física',
-      phone: firestoreData.phone || ''
+      phone: firestoreData.phone || '',
+      oab: firestoreData.oab || '',
+      dataNascimento: firestoreData.dataNascimento || '',
+      estadoCivil: firestoreData.estadoCivil || '',
+      endereco: firestoreData.endereco || {}
     };
   }
 
   async updateMe(uid, data) {
-    console.log(">>> DADOS RECEBIDOS NO SERVICE (updateMe):", JSON.stringify(data, null, 2));
     const {
       name, email, password,
       cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco
     } = data;
 
-    // 1. Auth (Login)
     const currentUserRecord = await auth.getUser(uid);
     const updateData = {};
 
@@ -103,8 +102,9 @@ class UserService {
       await auth.updateUser(uid, updateData);
     }
 
-    // 2. Firestore (Dados)
+    //const userRecord = await auth.getUser(uid);
     const isClient = currentUserRecord.customClaims?.role === 'cliente';
+    const collectionRef = isClient ? db.collection('clients') : db.collection('users');
 
     // Define explicitamente onde salvar
     const targetRef = isClient
@@ -114,6 +114,8 @@ class UserService {
     const firestoreData = { updatedAt: new Date() };
 
     // Mapeia todos os campos novos para o objeto de salvamento
+    if (name) firestoreData.name = name;
+    if (email) firestoreData.email = email;
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
     if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
     if (phone !== undefined) firestoreData.phone = phone;
@@ -122,41 +124,16 @@ class UserService {
     if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
     if (endereco !== undefined) firestoreData.endereco = endereco;
 
-    // Atualiza campos básicos também para manter sincronia
-    if (name) firestoreData.name = name;
-    if (email) firestoreData.email = email;
-
-    // Salva com merge (cria se não existir, atualiza se existir)
-    await targetRef.set(firestoreData, { merge: true });
+    //await targetRef.set(firestoreData, { merge: true });
+    await collectionRef.doc(uid).set(firestoreData, { merge: true });
 
     return { uid, ...data };
   }
 
-  async updateUser(uid, updates) {
-    const userRecord = await auth.updateUser(uid, {
-      displayName: updates.name,
-      email: updates.email,
-      password: updates.password,
-    });
-
-    // Atualiza Firestore também, se existir
-    if (db) {
-      await db.collection('users').doc(uid).update({
-        name: updates.name ?? userRecord.displayName,
-        email: updates.email ?? userRecord.email,
-      });
-    }
-
-    return {
-      uid: userRecord.uid,
-      name: userRecord.displayName,
-      email: userRecord.email,
-    };
-  }
-
   async listAdvogados() {
     const listUsersResult = await auth.listUsers(1000);
-
+    const authUsers = listUsersResult.users.filter(user => user.customClaims && user.customClaims.role === 'advogado');
+    /*
     const advogados = listUsersResult.users
       .filter(user => user.customClaims && user.customClaims.role === 'advogado')
       .map(user => {
@@ -167,14 +144,56 @@ class UserService {
         };
       });
 
-    return advogados;
+    return advogados;*/
+    return authUsers.map(user => ({
+      uid: user.uid,
+      email: user.email,
+      name: user.displayName,
+    }));
   }
-  async updateAdvogado(userId, dataToUpdate) {
-    const {
-      name, email, password,
-      cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco
-    } = dataToUpdate;
+  /*
+    async updateAdvogado(userId, dataToUpdate) {
+      const {
+        name, email, password,
+        cpfCnpj, oab, phone, dataNascimento, estadoCivil, endereco
+      } = dataToUpdate;
+  
+      const authUpdates = {};
+      if (name) authUpdates.displayName = name;
+      if (email) authUpdates.email = email;
+      if (password && password.trim().length >= 6) authUpdates.password = password;
+      if (Object.keys(authUpdates).length > 0) {
+        await auth.updateUser(userId, authUpdates);
+      }
+  
+      const firestoreData = {
+        updatedAt: new Date()
+      };
+      // Mapeamento manual
+      if (name) firestoreData.name = name;
+      if (email) firestoreData.email = email;
+      // ESTES SÃO OS CAMPOS QUE DEVEM ESTAR AQUI:
+      if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
+      if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
+      if (phone !== undefined) firestoreData.phone = phone;
+      if (oab !== undefined) firestoreData.oab = oab;
+      if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
+      if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
+      if (endereco !== undefined) firestoreData.endereco = endereco;
+  
+      await db.collection('users').doc(userId).set(firestoreData, { merge: true });
+  
+      return {
+        uid: userId,
+        ...dataToUpdate
+      };
+    }*/
 
+  async updateAdvogado(userId, dataToUpdate) {
+    // Reutiliza a lógica de mapeamento, mas forçando a coleção 'users'
+    const { name, email, password, cpfCnpj, tipoPessoa, phone, oab, dataNascimento, estadoCivil, endereco } = dataToUpdate;
+
+    // 1. Auth
     const authUpdates = {};
     if (name) authUpdates.displayName = name;
     if (email) authUpdates.email = email;
@@ -184,25 +203,22 @@ class UserService {
       await auth.updateUser(userId, authUpdates);
     }
 
-    const firestoreData = {
-      updatedAt: new Date()
-    };
+    // 2. Firestore (Sempre na coleção users para advogados)
+    const firestoreData = { updatedAt: new Date() };
 
     if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
     if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
-    if (oab !== undefined) firestoreData.oab = oab;
+    if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
     if (phone !== undefined) firestoreData.phone = phone;
+    if (oab !== undefined) firestoreData.oab = oab;
     if (dataNascimento !== undefined) firestoreData.dataNascimento = dataNascimento;
     if (estadoCivil !== undefined) firestoreData.estadoCivil = estadoCivil;
     if (endereco !== undefined) firestoreData.endereco = endereco;
 
     await db.collection('users').doc(userId).set(firestoreData, { merge: true });
 
-    return {
-      uid: userId,
-      ...dataToUpdate
-    };
+    return { uid: userId, ...dataToUpdate };
   }
 
   async deleteAdvogado(userId) {
@@ -233,6 +249,28 @@ class UserService {
       );
       uploadStream.end(file.buffer);
     });
+  }
+
+  async updateUser(uid, updates) {
+    const userRecord = await auth.updateUser(uid, {
+      displayName: updates.name,
+      email: updates.email,
+      password: updates.password,
+    });
+
+    // Atualiza Firestore também, se existir
+    if (db) {
+      await db.collection('users').doc(uid).update({
+        name: updates.name ?? userRecord.displayName,
+        email: updates.email ?? userRecord.email,
+      });
+    }
+
+    return {
+      uid: userRecord.uid,
+      name: userRecord.displayName,
+      email: userRecord.email,
+    };
   }
 }
 

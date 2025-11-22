@@ -27,6 +27,23 @@ const updateAdvogadoSchema = z.object({
   body: z.object({
     name: z.string().min(3).optional(),
     email: z.string().email().optional(),
+    // ADICIONE ESTES CAMPOS QUE FALTAVAM:
+    password: z.string().min(6).optional(),
+    cpfCnpj: z.string().optional(),
+    phone: z.string().optional(),
+    oab: z.string().optional(),
+    dataNascimento: z.string().optional(),
+    estadoCivil: z.string().optional(),
+    tipoPessoa: z.string().optional(),
+    endereco: z.object({
+      cep: z.string().optional(),
+      rua: z.string().optional(),
+      numero: z.string().optional(),
+      complemento: z.string().optional(),
+      bairro: z.string().optional(),
+      cidade: z.string().optional(),
+      estado: z.string().optional(),
+    }).optional(),
   })
 });
 
