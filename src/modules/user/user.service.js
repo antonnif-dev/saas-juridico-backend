@@ -52,37 +52,32 @@ class UserService {
   async createAdvogado(userData) {
     const { name, email, password } = userData;
 
-    // 1. Cria o usuário no Firebase Authentication
+    // 1. Cria o Login
     const userRecord = await auth.createUser({
       email: email,
       password: password,
       displayName: name,
     });
 
-    // 2. Define o Custom Claim (o perfil)
+    // 2. Define a Permissão
     await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
 
-    // 3. CRIA O DOCUMENTO NO FIRESTORE (A peça que faltava)
-    // --- INÍCIO DA ALTERAÇÃO ---
-    // Isso garante que o usuário já tenha dados ao logar pela primeira vez
-    // Usamos 'db.collection' diretamente para garantir que a referência esteja correta
+    // 3. Salva na Coleção 'users' (Manual ou Automática)
+    // Usamos 'set' para criar o documento com o ID igual ao UID do login
     await db.collection('users').doc(userRecord.uid).set({
       name: name,
       email: email,
       role: 'advogado',
-      createdAt: new Date(),
-      // Inicializa campos vazios para evitar erros no frontend
-      cpfCnpj: '',
-      phone: '',
-      tipoPessoa: 'Física',
-      status: 'ativo'
+      tipoPessoa: 'Física', // Padrão para evitar erro no front
+      cpfCnpj: '',          // Padrão
+      phone: '',            // Padrão
+      status: 'ativo',
+      createdAt: new Date()
     });
-    // --- FIM DA ALTERAÇÃO ---
 
     return {
       uid: userRecord.uid,
       email: userRecord.email,
-      name: userRecord.displayName,
       role: 'advogado'
     };
   }
