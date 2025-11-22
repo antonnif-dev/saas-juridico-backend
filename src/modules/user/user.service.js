@@ -1,4 +1,4 @@
-const { auth } = require('../../config/firebase.config');
+const { auth, db } = require('../../config/firebase.config');
 const usersCollection = db.collection('users');
 
 class UserService {
@@ -13,28 +13,84 @@ class UserService {
     console.log(`Perfil '${role}' atribuído ao usuário ${uid}`);
     return { message: `Perfil '${role}' atribuído com sucesso.` };
   }
+  /*
+    async createAdvogado(userData) {
+      const { name, email, password } = userData;
+  
+      // 1. Cria o usuário no Firebase Authentication
+      const userRecord = await auth.createUser({
+        email: email,
+        password: password,
+        displayName: name,
+      });
+  
+      // 2. Define o Custom Claim (o perfil)
+      await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
+  
+      // 3. CRIA O DOCUMENTO NO FIRESTORE (A peça que faltava)
+      // Isso garante que o usuário já tenha dados ao logar pela primeira vez
+      await usersCollection.doc(userRecord.uid).set({
+        name: name,
+        email: email,
+        role: 'advogado',
+        createdAt: new Date(),
+        // Inicializa campos vazios para evitar erros no frontend
+        cpfCnpj: '',
+        phone: '',
+        tipoPessoa: 'Física',
+        status: 'ativo'
+      });
+  
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        name: userRecord.displayName,
+        role: 'advogado'
+      };
+    }*/
 
   async createAdvogado(userData) {
     const { name, email, password } = userData;
+
+    // 1. Cria o usuário no Firebase Authentication
     const userRecord = await auth.createUser({
       email: email,
       password: password,
       displayName: name,
     });
 
+    // 2. Define o Custom Claim (o perfil)
     await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
-    const cleanUser = {
+
+    // 3. CRIA O DOCUMENTO NO FIRESTORE (A peça que faltava)
+    // --- INÍCIO DA ALTERAÇÃO ---
+    // Isso garante que o usuário já tenha dados ao logar pela primeira vez
+    // Usamos 'db.collection' diretamente para garantir que a referência esteja correta
+    await db.collection('users').doc(userRecord.uid).set({
+      name: name,
+      email: email,
+      role: 'advogado',
+      createdAt: new Date(),
+      // Inicializa campos vazios para evitar erros no frontend
+      cpfCnpj: '',
+      phone: '',
+      tipoPessoa: 'Física',
+      status: 'ativo'
+    });
+    // --- FIM DA ALTERAÇÃO ---
+
+    return {
       uid: userRecord.uid,
       email: userRecord.email,
       name: userRecord.displayName,
       role: 'advogado'
     };
-    return cleanUser;
   }
 
+
   async getMe(uid) {
-    const userRecord = await auth.getUser(uid);    
-    let doc = await usersCollection.doc(uid).get();    
+    const userRecord = await auth.getUser(uid);
+    let doc = await usersCollection.doc(uid).get();
     if (!doc.exists) {
       const clientsCollection = db.collection('clients');
       doc = await clientsCollection.doc(uid).get();
@@ -54,27 +110,44 @@ class UserService {
 
   async updateMe(uid, data) {
     const { name, email, password, cpfCnpj, tipoPessoa, phone } = data;
+
+    // 1. Busca dados atuais para comparar
+    const currentUserRecord = await auth.getUser(uid);
+
+    // 2. Prepara atualização do Auth (Login)
     const updateData = {};
+
     if (name) updateData.displayName = name;
-    if (email) updateData.email = email;
-    if (password) updateData.password = password;
-    
+
+    // SÓ tenta atualizar o email se ele for DIFERENTE do atual
+    if (email && email !== currentUserRecord.email) {
+      updateData.email = email;
+    }
+
+    // SÓ atualiza senha se ela foi enviada e não está vazia
+    if (password && password.trim().length > 0) {
+      updateData.password = password;
+    }
+
+    // Se houver algo para atualizar no Auth, envia
     if (Object.keys(updateData).length > 0) {
       await auth.updateUser(uid, updateData);
     }
 
-    const userRecord = await auth.getUser(uid);
-    const isClient = userRecord.customClaims?.role === 'cliente';    
+    // 3. Atualiza Firestore (Dados extras)
+    const isClient = currentUserRecord.customClaims?.role === 'cliente';
     const collectionTarget = isClient ? db.collection('clients') : usersCollection;
-    const firestoreData = {
-      updatedAt: new Date()
-    };
-    if (cpfCnpj) firestoreData.cpfCnpj = cpfCnpj;
-    if (tipoPessoa) firestoreData.tipoPessoa = tipoPessoa;
-    if (phone) firestoreData.phone = phone;
-    if (name) firestoreData.name = name; 
+
+    const firestoreData = { updatedAt: new Date() };
+
+    // Atualiza campos apenas se vierem preenchidos (evita apagar dados)
+    if (cpfCnpj !== undefined) firestoreData.cpfCnpj = cpfCnpj;
+    if (tipoPessoa !== undefined) firestoreData.tipoPessoa = tipoPessoa;
+    if (phone !== undefined) firestoreData.phone = phone;
+    if (name) firestoreData.name = name;
     if (email) firestoreData.email = email;
 
+    // 'merge: true' garante que o documento seja criado se não existir
     await collectionTarget.doc(uid).set(firestoreData, { merge: true });
 
     return { uid, ...data };
