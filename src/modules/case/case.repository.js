@@ -59,9 +59,11 @@ class ProcessoRepository {
     }*/
 
   async update(id, data) {
-    const cleanData = JSON.parse(JSON.stringify(data));
-    await collection.doc(id).update(data);
-    return { id, ...cleanData };
+    const updatePayload = {
+      ...data,
+      updatedAt: new Date(),
+    };
+    return this.repository.update(id, updatePayload);
   }
 
   async delete(id) {
