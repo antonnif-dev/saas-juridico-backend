@@ -57,9 +57,11 @@ class ProcessoService {
   }
 
   async updateProcesso(processoId, dataToUpdate, userId) {
-    console.log("DADOS RECEBIDOS:", JSON.stringify(dataToUpdate));
+    console.log("LOG 2: Service - Recebido. ProcessoID:", processoId, "Payload:", JSON.stringify(dataToUpdate)); // PONTO 2
     await this.getProcessoById(processoId, userId);
-    return await processoRepository.update(processoId, dataToUpdate);
+    const result = await processoRepository.update(processoId, dataToUpdate);
+    console.log("LOG 3: Service - Repositório executado com sucesso."); // PONTO 3
+    return result;
   }
 
   async updateItem(processoId, data, userId) {

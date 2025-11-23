@@ -42,6 +42,9 @@ class ProcessoRepository {
   }
 
   async update(id, data) {
+    console.log("LOG 2.5: Repository - Preparando UPDATE no Firestore. Payload:", JSON.stringify(data)); // PONTO 2.5
+    const docRef = this.collection.doc(id);
+    await docRef.update(data);
     const updatePayload = {
         ...data,
         updatedAt: FieldValue.serverTimestamp()
