@@ -59,11 +59,7 @@ class ProcessoRepository {
     }*/
 
   async update(id, data) {
-    const updatePayload = {
-      ...data,
-      updatedAt: new Date(),
-    };
-    return this.repository.update(id, updatePayload);
+    return this.repository.update(id, data);
   }
 
   async delete(id) {
