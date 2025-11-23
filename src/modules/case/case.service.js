@@ -1,10 +1,10 @@
-const caseRepository = require('./case.repository');
+const processoRepository = require('./case.repository');
 const { storage, db } = require('../../config/firebase.config'); // Adicione 'db' se não estiver lá
 const { v4: uuidv4 } = require('uuid');
 const { FieldValue } = require('firebase-admin/firestore');
 const cloudinary = require('../../config/cloudinary.config.js');
 
-class CaseService {
+class ProcessoService {
   /**
    * Cria um novo processo com os dados fornecidos e metadados essenciais.
    * @param {object} processoData - Os dados do processo vindos do formulário (título, área, etc.).
@@ -12,22 +12,18 @@ class CaseService {
    * @returns {Promise<object>} O novo processo criado.
    */
 
-  async createCase(processoData, userId) {
+  async createProcesso(processoData, userId) { // <-- NOME DO MÉTODO CORRIGIDO
     const dataToSave = {
       ...processoData,
-      createdBy: userId,       // Legado
-      responsavelUid: userId,  // Novo Padrão
-
+      createdBy: userId,
+      responsavelUid: userId,
       createdAt: new Date(),
       documentos: [],
       movimentacoes: [],
-
       status: processoData.status || 'Em andamento',
       urgencia: processoData.urgencia || 'Média'
     };
-
-    const newCase = await processoRepository.create(dataToSave);
-    return newCase;
+    return await processoRepository.create(dataToSave);
   }
 
   /**
@@ -36,9 +32,7 @@ class CaseService {
    * @returns {Promise<Array>} Uma lista de processos.
    */
   async getCasesForUser(userId) {
-    console.log('--- 2. Entrou no Service: getCasesForUser ---');
     const result = await processoRepository.findAllByOwner(userId);
-    console.log('--- 4. Retornando do Service para o Controller ---');
     return result;
   }
 
@@ -46,30 +40,38 @@ class CaseService {
     return this.getCasesForUser(userId);
   }
 
-  async getCaseById(processoId, user) {
+  async getProcessoById(processoId, user) {
     const processoDoc = await processoRepository.findById(processoId);
     if (!processoDoc) {
       throw new Error('Processo não encontrado.');
     }
     const userData = typeof user === 'string' ? { uid: user, role: 'advogado' } : user;
-
     if (userData.role === 'administrador' || userData.role === 'advogado') {
       const isOwner = (processoDoc.responsavelUid === userData.uid) || (processoDoc.createdBy === userData.uid);
-
       return processoDoc;
     }
-
     if (userData.role === 'cliente' && processoDoc.clientId === userData.clientId) {
       return processoDoc;
     }
-
     throw new Error('Acesso não permitido a este processo.');
   }
 
+  async updateProcesso(processoId, dataToUpdate, userId) {
+    await this.getProcessoById(processoId, userId);
+    return await processoRepository.update(processoId, dataToUpdate);
+  }
+
+  async updateItem(processoId, data, userId) {
+    return this.updateProcesso(processoId, data, userId);
+  }
+
+  async deleteItem(processoId, userId) {
+    return this.deleteProcesso(processoId, userId);
+  }
+
   async deleteProcesso(processoId, userId) {
-    // Mesma verificação de permissão
-    await this.getCaseById(processoId, userId);
-    return await processoRepository.delete(processoId);
+    await this.getProcessoById(processoId, userId);
+    return processoRepository.delete(processoId);
   }
 
   async uploadDocumentToCase(processoId, file, user) {
@@ -182,19 +184,10 @@ class CaseService {
     return documento;
   }
 
-  async updateItem(processoId, data, userId) { // Use processoId para consistência
-    return this.updateCase(processoId, data, userId);
-  }
-
-  // Alias para o novo controller:
-  async deleteItem(processoId, userId) {
-    return this.deleteCase(processoId, userId);
-  }
-
   // O controller chama 'listItemsForUser' (mantém o nome), mas ele chama o seu getCasesForUser
   async listItemsForUser(userId) {
     return this.getCasesForUser(userId);
   }
 }
 
-module.exports = new CaseService();
+module.exports = new ProcessoService();

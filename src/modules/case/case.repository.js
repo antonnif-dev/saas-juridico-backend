@@ -2,7 +2,7 @@ const { db } = require('../../config/firebase.config');
 const casesCollection = db.collection('processo');
 const { FieldValue } = require('firebase-admin/firestore');
 
-class CaseRepository {
+class ProcessoRepository {
   get collection() {
     return db.collection('processo');
   }
@@ -41,13 +41,13 @@ class CaseRepository {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
   
-    async update(processoId, dataToUpdate) {
-      await casesCollection.doc(processoId).update(dataToUpdate);
-      return { id: processoId, ...dataToUpdate };
+    async update(caseId, dataToUpdate) {
+      await casesCollection.doc(caseId).update(dataToUpdate);
+      return { id: caseId, ...dataToUpdate };
     }
   
-    async delete(processoId) {
-      await casesCollection.doc(processoId).delete();
+    async delete(caseId) {
+      await casesCollection.doc(caseId).delete();
     }*/
 
   async update(id, data) {
@@ -90,7 +90,7 @@ class CaseRepository {
   async deleteMovimentacao(processoId, movimentacaoId) {
     await casesCollection.doc(processoId).collection('movimentacoes').doc(movimentacaoId).delete();
   }
-/*     addDocument com processoId, não processoId
+/*     addDocument com processoId, não caseId
   async addDocument(processoId, documentData) {
     const caseRef = casesCollection.doc(processoId);
     await caseRef.update({
@@ -98,9 +98,9 @@ class CaseRepository {
     });
   }*/
 
-  async addDocument(processoId, docData) {
+  async addDocument(caseId, docData) {
     const { FieldValue } = require('firebase-admin/firestore');
-    await this.collection.doc(processoId).update({
+    await this.collection.doc(caseId).update({
       documentos: FieldValue.arrayUnion(docData)
     });
   }
@@ -108,4 +108,4 @@ class CaseRepository {
 
 }
 
-module.exports = new CaseRepository();
+module.exports = new ProcessoRepository();
