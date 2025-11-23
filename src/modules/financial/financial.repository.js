@@ -18,8 +18,8 @@ class FinancialRepository {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async findByCase(caseId) {
-    const snapshot = await collection.where('processoId', '==', caseId).get();
+  async findByCase(processoId) {
+    const snapshot = await collection.where('processoId', '==', processoId).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 

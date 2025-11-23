@@ -1,12 +1,12 @@
 const clientService = require('../../modules/client/client.service');
-const caseService = require('../../modules/case/case.service');
+const processoService = require('../../modules/case/case.service');
 
 class PortalController {
   async getDashboardSummary(req, res) {
     try {
       const clientId = req.user.clientId;
       const client = await clientService.getClientById(clientId);
-      const clientCases = await caseService.getCasesByClientId(clientId);
+      const clientCases = await processoService.getCasesByClientId(clientId);
 
       const summaryData = {
         clientName: client.name,
@@ -25,7 +25,7 @@ class PortalController {
       const clientId = req.user.clientId;
       
       // Usamos a função de serviço que já criamos para buscar os processos
-      const cases = await caseService.getCasesByClientId(clientId);
+      const cases = await processoService.getCasesByClientId(clientId);
       
       res.status(200).json(cases);
     } catch (error) {

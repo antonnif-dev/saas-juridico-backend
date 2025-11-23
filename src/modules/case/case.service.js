@@ -7,14 +7,14 @@ const cloudinary = require('../../config/cloudinary.config.js');
 class CaseService {
   /**
    * Cria um novo processo com os dados fornecidos e metadados essenciais.
-   * @param {object} caseData - Os dados do processo vindos do formulário (título, área, etc.).
+   * @param {object} processoData - Os dados do processo vindos do formulário (título, área, etc.).
    * @param {string} userId - O ID do usuário autenticado que está criando o processo.
    * @returns {Promise<object>} O novo processo criado.
    */
 
-  async createCase(caseData, userId) {
+  async createCase(processoData, userId) {
     const dataToSave = {
-      ...caseData,
+      ...processoData,
       createdBy: userId,       // Legado
       responsavelUid: userId,  // Novo Padrão
 
@@ -22,11 +22,11 @@ class CaseService {
       documentos: [],
       movimentacoes: [],
 
-      status: caseData.status || 'Em andamento',
-      urgencia: caseData.urgencia || 'Média'
+      status: processoData.status || 'Em andamento',
+      urgencia: processoData.urgencia || 'Média'
     };
 
-    const newCase = await caseRepository.create(dataToSave);
+    const newCase = await processoRepository.create(dataToSave);
     return newCase;
   }
 
@@ -37,7 +37,7 @@ class CaseService {
    */
   async getCasesForUser(userId) {
     console.log('--- 2. Entrou no Service: getCasesForUser ---');
-    const result = await caseRepository.findAllByOwner(userId);
+    const result = await processoRepository.findAllByOwner(userId);
     console.log('--- 4. Retornando do Service para o Controller ---');
     return result;
   }
@@ -46,30 +46,30 @@ class CaseService {
     return this.getCasesForUser(userId);
   }
 
-  async getCaseById(caseId, user) {
-    const caseDoc = await caseRepository.findById(caseId);
-    if (!caseDoc) {
+  async getCaseById(processoId, user) {
+    const processoDoc = await processoRepository.findById(processoId);
+    if (!processoDoc) {
       throw new Error('Processo não encontrado.');
     }
     const userData = typeof user === 'string' ? { uid: user, role: 'advogado' } : user;
 
     if (userData.role === 'administrador' || userData.role === 'advogado') {
-      const isOwner = (caseDoc.responsavelUid === userData.uid) || (caseDoc.createdBy === userData.uid);
+      const isOwner = (processoDoc.responsavelUid === userData.uid) || (processoDoc.createdBy === userData.uid);
 
-      return caseDoc;
+      return processoDoc;
     }
 
-    if (userData.role === 'cliente' && caseDoc.clientId === userData.clientId) {
-      return caseDoc;
+    if (userData.role === 'cliente' && processoDoc.clientId === userData.clientId) {
+      return processoDoc;
     }
 
     throw new Error('Acesso não permitido a este processo.');
   }
 
-  async deleteCase(caseId, userId) {
+  async deleteProcesso(processoId, userId) {
     // Mesma verificação de permissão
-    await this.getCaseById(caseId, userId);
-    return await caseRepository.delete(caseId);
+    await this.getCaseById(processoId, userId);
+    return await processoRepository.delete(processoId);
   }
 
   async uploadDocumentToCase(processoId, file, user) {
@@ -117,7 +117,7 @@ class CaseService {
     if (!clientId) {
       throw new Error('O ID do cliente é obrigatório.');
     }
-    return await caseRepository.findAllByClientId(clientId);
+    return await processoRepository.findAllByClientId(clientId);
   }
 
   async addMovimentacao(processoId, movimentacaoData, userId) {
@@ -127,19 +127,19 @@ class CaseService {
       criadoPor: userId,
     };
 
-    return await caseRepository.addMovimentacao(processoId, dataToSave);
+    return await processoRepository.addMovimentacao(processoId, dataToSave);
   }
 
   async getAllMovimentacoes(processoId) {
-    return await caseRepository.findAllMovimentacoes(processoId);
+    return await processoRepository.findAllMovimentacoes(processoId);
   }
 
   async updateMovimentacao(processoId, movimentacaoId, movimentacaoData) {
-    return await caseRepository.updateMovimentacao(processoId, movimentacaoId, movimentacaoData);
+    return await processoRepository.updateMovimentacao(processoId, movimentacaoId, movimentacaoData);
   }
 
   async deleteMovimentacao(processoId, movimentacaoId) {
-    return await caseRepository.deleteMovimentacao(processoId, movimentacaoId);
+    return await processoRepository.deleteMovimentacao(processoId, movimentacaoId);
   }
 
   async uploadDocumentToCase(processoId, file, user) {
@@ -165,7 +165,7 @@ class CaseService {
           enviadoPor: user.uid,
         };
 
-        await caseRepository.addDocument(processoId, documentRecord);
+        await processoRepository.addDocument(processoId, documentRecord);
         resolve(documentRecord);
       });
 
@@ -182,18 +182,18 @@ class CaseService {
     return documento;
   }
 
+  async updateItem(processoId, data, userId) { // Use processoId para consistência
+    return this.updateCase(processoId, data, userId);
+  }
+
+  // Alias para o novo controller:
+  async deleteItem(processoId, userId) {
+    return this.deleteCase(processoId, userId);
+  }
+
+  // O controller chama 'listItemsForUser' (mantém o nome), mas ele chama o seu getCasesForUser
   async listItemsForUser(userId) {
     return this.getCasesForUser(userId);
-  }
-
-  // O controller chama 'updateItem', nós redirecionamos para o seu 'updateCase'
-  async updateItem(caseId, data, userId) {
-    return this.updateCase(caseId, data, userId);
-  }
-
-  // O controller chama 'deleteItem', nós redirecionamos para o seu 'deleteCase'
-  async deleteItem(caseId, userId) {
-    return this.deleteCase(caseId, userId);
   }
 }
 

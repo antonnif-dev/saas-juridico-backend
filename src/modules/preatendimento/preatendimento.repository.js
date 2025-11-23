@@ -3,7 +3,7 @@ const { FieldValue } = require('firebase-admin/firestore');
 
 const collection = db.collection('preatendimentos');
 const clientsCollection = db.collection('clients');
-const casesCollection = db.collection('processo');
+const processosCollection = db.collection('processo');
 
 class PreAtendimentoRepository {
   async create(data) {
@@ -79,8 +79,8 @@ class PreAtendimentoRepository {
     batch.set(clientRef, clientData, { merge: true });
 
     // 4. Processo
-    const caseRef = casesCollection.doc();
-    const caseData = {
+    const caseRef = processosCollection.doc();
+    const processoData = {
       titulo: `Caso: ${data.categoria}`,
       descricao: data.resumoProblema,
       clientId: uid,
@@ -95,11 +95,11 @@ class PreAtendimentoRepository {
       assinatura: data.signature || null,
       anexos: [...(data.clientFiles || []), ...(data.adminFiles || [])]
     };
-    batch.set(caseRef, caseData);
+    batch.set(caseRef, processoData);
 
     // 5. Atualiza status
     const preRef = collection.doc(id);
-    batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
+    batch.update(preRef, { status: 'Convertido', relatedProcessoId: caseRef.id });
 
     await batch.commit();
 
@@ -107,7 +107,7 @@ class PreAtendimentoRepository {
       success: true, 
       tempPassword: tempPassword,
       clientId: uid,
-      caseId: caseRef.id
+      processoId: caseRef.id
     };
   }
 }
@@ -156,7 +156,7 @@ module.exports = new PreAtendimentoRepository();
       batch.set(clientRef, clientData, { merge: true });
   
       const caseRef = casesCollection.doc();
-      const caseData = {
+      const processoData = {
         titulo: `Caso: ${data.categoria}`,
         descricao: data.resumoProblema,
         clientId: clientRef.id,
@@ -167,10 +167,10 @@ module.exports = new PreAtendimentoRepository();
         urgencia: data.urgencia,
         numeroProcesso: 'Aguardando Distribuição'
       };
-      batch.set(caseRef, caseData);
+      batch.set(caseRef, processoData);
   
       const preRef = collection.doc(id);
-      batch.update(preRef, { status: 'Convertido', relatedCaseId: caseRef.id });
+      batch.update(preRef, { status: 'Convertido', relatedprocessoId: caseRef.id });
   
       await batch.commit();
       return {
@@ -178,7 +178,7 @@ module.exports = new PreAtendimentoRepository();
         tempPassword: tempPassword,
         isNewUser: true,
         clientId: uid,
-        caseId: caseRef.id
+        processoId: caseRef.id
       };
     }
   */

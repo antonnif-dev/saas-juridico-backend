@@ -12,10 +12,10 @@ class FinancialController {
 
   async list(req, res) {
     try {
-      // Se vier ?caseId=XYZ na URL, filtra por caso. Se não, lista tudo.
-      const { caseId } = req.query;
-      const result = caseId 
-        ? await service.getTransactionsByCase(caseId)
+      // Se vier ?processoId=XYZ na URL, filtra por caso. Se não, lista tudo.
+      const { processoId } = req.query;
+      const result = processoId 
+        ? await service.getTransactionsByCase(processoId)
         : await service.getTransactions(req.user.uid);
       res.status(200).json(result);
     } catch (error) {

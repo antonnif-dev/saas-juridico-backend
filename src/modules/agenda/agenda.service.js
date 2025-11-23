@@ -3,7 +3,7 @@ const { Timestamp } = require('firebase-admin/firestore');
 const agendaRepository = require('./agenda.repository');
 const { Client } = require("@upstash/qstash");
 
-const caseService = require('../case/case.service');
+const processoService = require('../case/case.service');
 
 // Inicializa o cliente do QStash com seu token do .env
 const qstashClient = new Client({
@@ -28,7 +28,7 @@ class AgendaService {
     if (itemData.tipo === 'Audiência' && itemData.processoId) {
        try {
          console.log(`Gatilho ativado: Atualizando processo ${itemData.processoId} para 'Aguardando Audiência'`);
-         await caseService.updateItem(itemData.processoId, { status: 'Aguardando Audiência' }, userId);
+         await processoService.updateItem(itemData.processoId, { status: 'Aguardando Audiência' }, userId);
        } catch (e) {
          console.error("Erro ao atualizar status do processo via agenda:", e.message);
          // Não paramos o fluxo aqui, apenas logamos o erro, pois o compromisso já foi criado.

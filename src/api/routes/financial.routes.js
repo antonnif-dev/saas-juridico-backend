@@ -6,7 +6,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 router.use(authMiddleware(['administrador', 'advogado', 'cliente']));
 
 router.post('/', controller.create);
-router.get('/', controller.list); // Aceita query param ?caseId=...
+router.get('/', controller.list); // Aceita query param ?processoId=...
 router.put('/:id/pay', controller.pay);
 
 module.exports = router;

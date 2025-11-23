@@ -10,8 +10,8 @@ class FinancialService {
     return await repository.findAllByUser(userId);
   }
 
-  async getTransactionsByCase(caseId) {
-    return await repository.findByCase(caseId);
+  async getTransactionsByCase(processoId) {
+    return await repository.findByCase(processoId);
   }
 
   async markAsPaid(id) {

@@ -1,11 +1,11 @@
-const caseService = require('../../modules/case/case.service');
+const processoService = require('../../modules/case/case.service');
 const axios = require('axios');
 
 class CaseController {
   async create(req, res) {
     try {
       const userId = req.user.uid;
-      const newCase = await caseService.createCase(req.body, userId);
+      const newCase = await processoService.createCase(req.body, userId);
       res.status(201).json(newCase);
     } catch (error) {
       console.error('!!! ERRO no Controller:', error);
@@ -16,7 +16,7 @@ class CaseController {
   async list(req, res) {
     try {
       console.log('--- 1. Entrou no Controller: list ---');
-      const cases = await caseService.getCasesForUser(req.user.uid);
+      const cases = await processoService.getCasesForUser(req.user.uid);
       console.log('--- 5. Saindo do Controller com sucesso ---');
       res.status(200).json(cases);
     } catch (error) {
@@ -24,22 +24,11 @@ class CaseController {
       res.status(500).json({ message: 'Erro ao listar processos.', error: error.message });
     }
   }
-  /*
-    async getById(req, res) {
-      try {
-        const { id } = req.params;
-        const caseDoc = await caseService.getCaseById(id, req.user.uid);
-        res.status(200).json(caseDoc);
-      } catch (error) {
-        res.status(404).json({ message: error.message });
-      }
-    }
-  */
 
   async getById(req, res) {
     try {
       const { id } = req.params;
-      const processo = await caseService.getCaseById(id, req.user);
+      const processo = await processoService.getCaseById(id, req.user);
       res.status(200).json(processo);
     } catch (error) {
       const statusCode = error.message.includes('Acesso não permitido') ? 403 : 404;
@@ -50,7 +39,7 @@ class CaseController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const updatedCase = await caseService.updateCase(id, req.body, req.user.uid);
+      const updatedCase = await processoService.updateCase(id, req.body, req.user.uid);
       res.status(200).json(updatedCase);
     } catch (error) {
       if (error.message.includes('não encontrado') || error.message.includes('permissão')) {
@@ -63,7 +52,7 @@ class CaseController {
   async delete(req, res) {
     try {
       const { id } = req.params;
-      await caseService.deleteCase(id, req.user.uid);
+      await processoService.deleteCase(id, req.user.uid);
       res.status(204).send(); // 204 No Content é a resposta padrão para delete com sucesso
     } catch (error) {
       res.status(404).json({ message: error.message });
@@ -76,7 +65,7 @@ class CaseController {
       const file = req.file; // 'file' é injetado pelo multer
       const user = req.user;
 
-      const documentRecord = await caseService.uploadDocumentToCase(id, file, user);
+      const documentRecord = await processoService.uploadDocumentToCase(id, file, user);
       res.status(200).json({ message: 'Upload bem-sucedido', document: documentRecord });
     } catch (error) {
       res.status(500).json({ message: 'Erro durante o upload.', error: error.message });
@@ -93,7 +82,7 @@ class CaseController {
         return res.status(400).json({ message: 'A descrição da movimentação é obrigatória.' });
       }
 
-      const novaMovimentacao = await caseService.addMovimentacao(processoId, { descricao }, userId);
+      const novaMovimentacao = await processoService.addMovimentacao(processoId, { descricao }, userId);
 
       res.status(201).json(novaMovimentacao);
     } catch (error) {
@@ -105,7 +94,7 @@ class CaseController {
   async getAllMovimentacoes(req, res) {
     try {
       const { processoId } = req.params;
-      const movimentacoes = await caseService.getAllMovimentacoes(processoId);
+      const movimentacoes = await processoService.getAllMovimentacoes(processoId);
       res.status(200).json(movimentacoes);
     } catch (error) {
       console.error("!!! ERRO AO BUSCAR MOVIMENTAÇÕES:", error);
@@ -117,7 +106,7 @@ class CaseController {
     try {
       const { processoId, movimentacaoId } = req.params;
       const { descricao } = req.body;
-      const updatedMovimentacao = await caseService.updateMovimentacao(processoId, movimentacaoId, { descricao });
+      const updatedMovimentacao = await processoService.updateMovimentacao(processoId, movimentacaoId, { descricao });
       res.status(200).json(updatedMovimentacao);
     } catch (error) {
       res.status(500).json({ message: 'Erro interno ao atualizar movimentação.' });
@@ -127,7 +116,7 @@ class CaseController {
   async deleteMovimentacao(req, res) {
     try {
       const { processoId, movimentacaoId } = req.params;
-      await caseService.deleteMovimentacao(processoId, movimentacaoId);
+      await processoService.deleteMovimentacao(processoId, movimentacaoId);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: 'Erro interno ao excluir movimentação.' });
@@ -144,7 +133,7 @@ class CaseController {
         return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
       }
 
-      const newDocument = await caseService.uploadDocumentToCase(processoId, file, user);
+      const newDocument = await processoService.uploadDocumentToCase(processoId, file, user);
       res.status(201).json({ document: newDocument });
     } catch (error) {
       console.error("!!! ERRO NO UPLOAD:", error);
@@ -156,7 +145,7 @@ class CaseController {
     try {
       const { id: processoId, docId } = req.params;
       const user = req.user;
-      const docRecord = await caseService.getDocumentRecord(processoId, docId, user);
+      const docRecord = await processoService.getDocumentRecord(processoId, docId, user);
       const response = await axios({
         method: 'GET',
         url: docRecord.url,

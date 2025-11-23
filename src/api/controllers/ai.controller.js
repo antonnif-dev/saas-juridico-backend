@@ -26,7 +26,7 @@ class AiController {
 
   // Gera Relatório Final e NPS
   async generateReport(req, res) {
-    const { caseId, type } = req.body;
+    const { processoId, type } = req.body;
     let response = {};
 
     if (type === 'pdf') {
