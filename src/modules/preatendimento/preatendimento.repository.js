@@ -89,7 +89,7 @@ class PreAtendimentoRepository {
       area: data.categoria,
       createdAt: new Date(),
       urgencia: data.urgencia,
-      numeroProcesso: 'Aguardando Distribuição',
+      numeroProcesso: null,
       // Copia dados da negociação se existirem
       valorAcordado: data.proposalValue || null,
       assinatura: data.signature || null,
