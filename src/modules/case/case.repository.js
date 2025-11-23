@@ -40,26 +40,15 @@ class ProcessoRepository {
     if (!doc.exists) return null;
     return { id: doc.id, ...doc.data() };
   }
-/*
-  async findAllByWorkspace(workspaceId) {
-    const snapshot = await casesCollection.where('workspaceId', '==', workspaceId).get();
-    if (snapshot.empty) {
-      return [];
-    }
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  }
-  
-    async update(caseId, dataToUpdate) {
-      await casesCollection.doc(caseId).update(dataToUpdate);
-      return { id: caseId, ...dataToUpdate };
-    }
-  
-    async delete(caseId) {
-      await casesCollection.doc(caseId).delete();
-    }*/
 
   async update(id, data) {
-    return this.repository.update(id, data);
+    const updatePayload = {
+        ...data,
+        updatedAt: FieldValue.serverTimestamp()
+    };
+    await this.collection.doc(id).update(updatePayload);
+    const updatedDoc = await this.collection.doc(id).get();
+    return { id: updatedDoc.id, ...updatedDoc.data() };
   }
 
   async delete(id) {
