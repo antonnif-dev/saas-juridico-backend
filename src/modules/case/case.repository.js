@@ -16,7 +16,7 @@ class ProcessoRepository {
     const docRef = await this.collection.add(data);
     return { id: docRef.id, ...data };
   }
-
+/*
   async findAllByOwner(userId) {
     const snapshot = await casesCollection.where('responsavelUid', '==', userId).get();
     if (snapshot.empty) {
@@ -24,6 +24,14 @@ class ProcessoRepository {
       if (legacySnapshot.empty) return [];
       return legacySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }*/
+
+  async findAllByOwner(userId) {
+    const snapshot = await this.collection.where('responsavelUid', '==', userId).get();    
+    if (snapshot.empty) {
+        return [];
+    }    
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
