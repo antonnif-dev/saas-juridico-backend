@@ -39,7 +39,7 @@ class CaseController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const updatedCase = await processoService.updateCase(id, req.body, req.user.uid);
+      const updatedCase = await processoService.updateProcesso(id, req.body, req.user.uid);
       res.status(200).json(updatedCase);
     } catch (error) {
       console.error("--- ERRO FATAL UPDATE PROCESSO ---", error);
