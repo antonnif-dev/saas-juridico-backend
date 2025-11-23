@@ -57,6 +57,7 @@ class ProcessoService {
   }
 
   async updateProcesso(processoId, dataToUpdate, userId) {
+    console.log("DADOS RECEBIDOS:", JSON.stringify(dataToUpdate));
     await this.getProcessoById(processoId, userId);
     return await processoRepository.update(processoId, dataToUpdate);
   }

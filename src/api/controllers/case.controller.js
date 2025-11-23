@@ -42,6 +42,7 @@ class CaseController {
       const updatedCase = await processoService.updateCase(id, req.body, req.user.uid);
       res.status(200).json(updatedCase);
     } catch (error) {
+      console.error("--- ERRO FATAL UPDATE PROCESSO ---", error);
       if (error.message.includes('não encontrado') || error.message.includes('permissão')) {
         return res.status(404).json({ message: error.message });
       }
