@@ -15,6 +15,7 @@ const messageRoutes = require('./api/routes/message.routes');
 const preatendimentoRoutes = require('./api/routes/preatendimento.routes');
 const financialRoutes = require('./api/routes/financial.routes');
 const aiRoutes = require('./api/routes/ai.routes');
+const notificationRoutes = require('./api/routes/notification.routes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -57,5 +58,6 @@ app.use('/api/ai', aiRoutes);
 app.get('/', (req, res) => {
   res.status(200).send({ message: 'API do SaaS Jurídico no ar!' });
 });
+app.use('/api/notifications', notificationRoutes);
 
 module.exports = app;

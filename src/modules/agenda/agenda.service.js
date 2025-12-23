@@ -23,44 +23,55 @@ class AgendaService {
     // 1. Cria o compromisso no seu banco de dados
     const newItem = await agendaRepository.create(dataToSave);
 
-    // --- NOVO: GATILHO AUTOMÁTICO DE STATUS (AUDIÊNCIA) ---
-    // Se for uma Audiência vinculada a um processo, muda o status do processo automaticamente
+    // --- GATILHO AUTOMÁTICO DE STATUS (AUDIÊNCIA) ---
     if (itemData.tipo === 'Audiência' && itemData.processoId) {
-       try {
-         console.log(`Gatilho ativado: Atualizando processo ${itemData.processoId} para 'Aguardando Audiência'`);
-         await processoService.updateItem(itemData.processoId, { status: 'Aguardando Audiência' }, userId);
-       } catch (e) {
-         console.error("Erro ao atualizar status do processo via agenda:", e.message);
-         // Não paramos o fluxo aqui, apenas logamos o erro, pois o compromisso já foi criado.
-       }
+      try {
+        console.log(`Gatilho ativado: Atualizando processo ${itemData.processoId} para 'Aguardando Audiência'`);
+        await processoService.updateItem(itemData.processoId, { status: 'Aguardando Audiência' }, userId);
+      } catch (e) {
+        console.error("Erro ao atualizar status do processo via agenda:", e.message);
+      }
     }
-    // -------------------------------------------------------
 
-    // 2. Agenda a notificação por e-mail com o Upstash (SEU CÓDIGO ORIGINAL MANTIDO)
+    // --- AGENDAMENTO DE NOTIFICAÇÃO (UPSTASH QSTASH) ---
     try {
       const dataDoCompromisso = new Date(itemData.dataHora);
-
-      // Mudei para 1 minuto antes para facilitar os testes. 
-      const dataDaNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000);
+      // Define a data da notificação (ex: 1 minuto antes)
+      const tempoNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000);
       const agora = new Date().getTime();
 
-      if (dataDaNotificacao > agora) {
+      // Verificamos se a data da notificação ainda não passou
+      if (tempoNotificacao > agora) {
         console.log(`Agendando notificação para o compromisso: ${newItem.id}`);
 
+        // Priorizamos BACKEND_URL, mas mantemos WEBHOOK_URL como fallback se houver
+        const targetUrl = process.env.BACKEND_URL
+          ? `${process.env.BACKEND_URL}/api/notifications/process-agenda`
+          : process.env.WEBHOOK_URL;
+
+        if (!targetUrl) {
+          throw new Error("URL de destino para o QStash não configurada (BACKEND_URL ou WEBHOOK_URL faltando).");
+        }
+
         const { messageId } = await qstashClient.publishJSON({
-          url: process.env.WEBHOOK_URL,
+          url: targetUrl,
           body: {
             compromissoId: newItem.id,
             userId: userId,
           },
-          notBefore: Math.floor(dataDaNotificacao / 1000),
+          // Converte para timestamp em segundos (exigido pelo QStash)
+          notBefore: Math.floor(tempoNotificacao / 1000),
         });
 
+        // Salva o ID da mensagem no compromisso para futura referência ou cancelamento
         await agendaRepository.update(newItem.id, { qstashMessageId: messageId });
         console.log(`Notificação agendada com sucesso! Message ID: ${messageId}`);
+      } else {
+        console.warn("A data do compromisso é muito próxima ou já passou. Notificação não agendada.");
       }
     } catch (error) {
-      console.error('!!! FALHA AO AGENDAR NOTIFICAÇÃO NO UPSTASH:', error);
+      // Aqui usamos newItem.id para evitar o ReferenceError anterior
+      console.error(`!!! FALHA AO AGENDAR NOTIFICAÇÃO NO UPSTASH para o item ${newItem.id}:`, error.message);
     }
 
     return newItem;
@@ -112,7 +123,7 @@ class AgendaService {
     }
   }
   */
- 
+
   async getItemsForUser(userId) {
     const items = await agendaRepository.findByUser(userId);
     // Ordena os resultados em JavaScript

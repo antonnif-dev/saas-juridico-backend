@@ -2,7 +2,6 @@ const { auth } = require('../../config/firebase.config');
 
 const authMiddleware = (allowedRoles = []) => {
   return async (req, res, next) => {
-    console.log('--- Auth Middleware: Iniciando verificação ---');
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,10 +12,19 @@ const authMiddleware = (allowedRoles = []) => {
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
-      console.log('--- Auth Middleware: Token verificado com sucesso! ---');
-      req.user = decodedToken;
-      
-      const userRole = decodedToken.role;
+
+      // Mapeamos as propriedades do Firebase para o padrão do seu sistema
+      req.user = {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        name: decodedToken.name || decodedToken.displayName,
+        role: decodedToken.role || 'cliente', // Fallback caso a claim não exista
+        ...decodedToken // Mantém o restante das claims
+      };
+
+      const userRole = req.user.role;
+
+      // Verificação de permissões
       if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
         return res.status(403).send({ message: 'Acesso negado. Permissão insuficiente.' });
       }

@@ -7,6 +7,8 @@ const { z } = require('zod');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
+// --- ESQUEMAS DE VALIDAÇÃO (ZOD) ---
+
 const updateRoleSchema = z.object({
   body: z.object({
     role: z.enum(['advogado', 'estagiario', 'secretaria', 'administrador'], {
@@ -23,104 +25,45 @@ const createAdvogadoSchema = z.object({
   })
 });
 
-const updateAdvogadoSchema = z.object({
-  body: z.object({
-    name: z.string().min(3).optional(),
-    email: z.string().email().optional(),
-    // ADICIONE ESTES CAMPOS QUE FALTAVAM:
-    password: z.string().min(6).optional(),
-    cpfCnpj: z.string().optional(),
-    phone: z.string().optional(),
-    oab: z.string().optional(),
-    dataNascimento: z.string().optional(),
-    estadoCivil: z.string().optional(),
-    tipoPessoa: z.string().optional(),
-    endereco: z.object({
-      cep: z.string().optional(),
-      rua: z.string().optional(),
-      numero: z.string().optional(),
-      complemento: z.string().optional(),
-      bairro: z.string().optional(),
-      cidade: z.string().optional(),
-      estado: z.string().optional(),
-    }).optional(),
-  })
-});
+// Campos comuns para Self e Advogado
+const profileFields = {
+  name: z.string().min(3).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(6).optional(),
+  cpfCnpj: z.string().optional(),
+  phone: z.string().optional(),
+  oab: z.string().optional(),
+  dataNascimento: z.string().optional(),
+  estadoCivil: z.string().optional(),
+  tipoPessoa: z.string().optional(),
+  endereco: z.object({
+    cep: z.string().optional(),
+    rua: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    estado: z.string().optional(),
+  }).optional(),
+};
 
-const updateSelfSchema = z.object({
-  body: z.object({
-    name: z.string().min(3).optional(),
-    email: z.string().email().optional(),
-    password: z.string().min(6).optional(),
-    cpfCnpj: z.string().optional(),
-    phone: z.string().optional(),
-    oab: z.string().optional(),
-    dataNascimento: z.string().optional(),
-    estadoCivil: z.string().optional(),
-    tipoPessoa: z.string().optional(),
-    endereco: z.object({
-      cep: z.string().optional(),
-      rua: z.string().optional(),
-      numero: z.string().optional(),
-      complemento: z.string().optional(),
-      bairro: z.string().optional(),
-      cidade: z.string().optional(),
-      estado: z.string().optional(),
-    }).optional(),
-  })
-});
+const updateAdvogadoSchema = z.object({ body: z.object(profileFields) });
+const updateSelfSchema = z.object({ body: z.object(profileFields) });
 
-router.patch(
-  '/:uid/role',
-  authMiddleware(['administrador']),
-  validate(updateRoleSchema),
-  userController.updateRole
-);
+// --- DEFINIÇÃO DAS ROTAS ---
 
-router.get(
-  '/me',
-  authMiddleware(),
-  userController.getMe
-);
+// Gerenciamento de Perfil Próprio (Self)
+router.get('/me', authMiddleware(), userController.getMe);
+router.put('/me', authMiddleware(), validate(updateSelfSchema), userController.updateMe);
+router.post('/me/photo', authMiddleware(), upload.single('photo'), userController.uploadPhoto);
 
-router.post(
-  '/advogado',
-  authMiddleware(['administrador']),
-  validate(createAdvogadoSchema),
-  userController.createAdvogado
-);
+// Gerenciamento de Advogados (Admin)
+router.post('/advogado', authMiddleware(['administrador']), validate(createAdvogadoSchema), userController.createAdvogado);
+router.get('/advogados', authMiddleware(['administrador']), userController.listAdvogados);
+router.put('/advogado/:id', authMiddleware(['administrador']), validate(updateAdvogadoSchema), userController.updateAdvogado);
+router.delete('/advogado/:id', authMiddleware(['administrador']), userController.deleteAdvogado);
 
-router.get(
-  '/advogados',
-  authMiddleware(['administrador']),
-  userController.listAdvogados
-);
-
-router.put(
-  '/advogado/:id',
-  authMiddleware(['administrador']),
-  validate(updateAdvogadoSchema),
-  userController.updateAdvogado
-);
-
-router.delete(
-  '/advogado/:id',
-  authMiddleware(['administrador']),
-  userController.deleteAdvogado
-);
-
-router.put(
-  '/me',
-  authMiddleware(),
-  validate(updateSelfSchema),
-  userController.updateMe
-);
-
-router.post(
-  '/me/photo',
-  authMiddleware(),
-  upload.single('photo'),
-  userController.uploadPhoto
-);
+// Perfil/Role
+router.patch('/:uid/role', authMiddleware(['administrador']), validate(updateRoleSchema), userController.updateRole);
 
 module.exports = router;

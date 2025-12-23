@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const messageController = require('../controllers/message.controller');
+const requireMessageOwnership = require('../middlewares/message-ownership.middleware');
 
 router.use(authMiddleware()); // Protege todas as rotas
 
