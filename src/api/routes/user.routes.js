@@ -49,14 +49,13 @@ const updateRoleSchema = z.object({
 
 // --- DEFINIÇÃO DAS ROTAS ---
 
-// 1. ROTAS DE PERFIL PRÓPRIO (Prioridade Máxima)
-// Estas rotas devem vir ANTES de qualquer rota com parâmetros dinâmicos como /:id
+// 1. Perfil Próprio (LIBERADO PARA TODOS LOGADOS)
 router.get('/me', authMiddleware(['administrador', 'advogado', 'cliente']), userController.getMe);
 router.put('/me', authMiddleware(['administrador', 'advogado', 'cliente']), validate(updateSelfSchema), userController.updateMe);
 router.post('/me/photo', authMiddleware(['administrador', 'advogado', 'cliente']), upload.single('photo'), userController.uploadPhoto);
 
-// 2. ROTAS DE GESTÃO DE EQUIPE (ADMIN)
-// Padronizei para 'advogados' (plural) para evitar confusão com a role 'advogado' (singular)
+// 2. Gestão de Advogados (RESTRITO AO ADMIN)
+// Use o 'adminOnly' aqui para garantir que ninguém mais acesse
 router.get('/advogados', authMiddleware(['administrador']), userController.listAdvogados);
 router.post('/advogados', authMiddleware(['administrador']), validate(createAdvogadoSchema), userController.createAdvogado);
 router.put('/advogados/:id', authMiddleware(['administrador']), validate(updateAdvogadoSchema), userController.updateAdvogado);

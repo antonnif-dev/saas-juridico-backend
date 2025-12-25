@@ -71,7 +71,7 @@ app.use('/api/ai', staffOnly, aiRoutes);
 // --- 4. ROTAS EXCLUSIVAS (ACESSO: APENAS ADMINISTRADOR) ---
 const adminOnly = authMiddleware(['administrador']);
 
-app.use('/api/users', adminOnly, userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/financial', authMiddleware(['administrador', 'cliente']), financialRoutes);
 
 module.exports = app;

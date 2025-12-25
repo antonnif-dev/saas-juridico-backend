@@ -12,6 +12,10 @@ const authMiddleware = (allowedRoles = []) => {
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
+      console.log("=== DEBUG AUTH ===");
+      console.log("UID:", decodedToken.uid);
+      console.log("CLAIMS COMPLETAS:", decodedToken); // Veja se 'role' aparece aqui
+      console.log("ROLE ENCONTRADA:", decodedToken.role);
 
       // Mapeamos as propriedades do Firebase para o padrão do seu sistema
       req.user = {
