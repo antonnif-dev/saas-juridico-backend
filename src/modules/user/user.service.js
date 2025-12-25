@@ -61,24 +61,24 @@ class UserService {
    * BUSCA DO PRÓPRIO PERFIL (Híbrido: Auth + DB)
    */
   async getMe(uid) {
-  const userRecord = await auth.getUser(uid);
-  const userData = await userRepository.findById(uid);
-  
-  return {
-    uid: userRecord.uid,
-    email: userRecord.email,
-    name: userRecord.displayName,
-    photoUrl: userData?.photoUrl || userRecord.photoURL || null, 
-    role: userRecord.customClaims?.role || 'indefinido',
-    cpfCnpj: userData?.cpfCnpj || '',
-    tipoPessoa: userData?.tipoPessoa || 'Física',
-    phone: userData?.phone || '',
-    oab: userData?.oab || '',
-    dataNascimento: userData?.dataNascimento || '',
-    estadoCivil: userData?.estadoCivil || '',
-    endereco: userData?.endereco || this._cleanAddress(null)
-  };
-}
+    const userRecord = await auth.getUser(uid);
+    const userData = await userRepository.findById(uid);
+
+    return {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName,
+      photoUrl: userData?.photoUrl || userRecord.photoURL || null,
+      role: userRecord.customClaims?.role || 'indefinido',
+      cpfCnpj: userData?.cpfCnpj || '',
+      tipoPessoa: userData?.tipoPessoa || 'Física',
+      phone: userData?.phone || '',
+      oab: userData?.oab || '',
+      dataNascimento: userData?.dataNascimento || '',
+      estadoCivil: userData?.estadoCivil || '',
+      endereco: userData?.endereco || this._cleanAddress(null)
+    };
+  }
 
   /**
    * ATUALIZAÇÃO DO PRÓPRIO PERFIL (Self)
@@ -98,7 +98,7 @@ class UserService {
 
     // 2. Atualização no Firestore via Repository
     const dbUpdates = { ...profileFields, updatedAt: new Date() };
-    
+
     if (name) dbUpdates.name = name;
     if (email) dbUpdates.email = email;
     if (profileFields.endereco) {
@@ -149,24 +149,52 @@ class UserService {
     const cloudinary = require('../../config/cloudinary.config');
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { 
-          folder: `users/${userId}/profile`, 
-          public_id: 'avatar', 
-          overwrite: true, 
-          transformation: [{ width: 500, height: 500, crop: "fill" }] 
+        {
+          folder: `users/${userId}/profile`,
+          public_id: 'avatar',
+          overwrite: true,
+          transformation: [{ width: 500, height: 500, crop: "fill" }]
         },
         async (error, result) => {
           if (error) return reject(error);
           await auth.updateUser(userId, { photoURL: result.secure_url });
-          
+
           // Sincroniza a URL da foto no Firestore também
           await userRepository.update(userId, { photoUrl: result.secure_url });
-          
+
           resolve({ photoUrl: result.secure_url });
         }
       );
       uploadStream.end(file.buffer);
     });
+  }
+
+  async createUserWithRole(userData, role) {
+    const { name, email, password, ...otherFields } = userData;
+
+    // 1. Criação no Firebase Auth
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    // 2. Define a Claim IMUTÁVEL no Token (Hierarquia real)
+    await auth.setCustomUserClaims(userRecord.uid, { role: role });
+
+    // 3. Persistência no Firestore
+    const firestoreData = {
+      ...otherFields,
+      name,
+      email,
+      role: role,
+      status: 'ativo',
+      createdAt: new Date(),
+      endereco: this._cleanAddress(userData.endereco)
+    };
+
+    await userRepository.update(userRecord.uid, firestoreData);
+    return { uid: userRecord.uid, email, role };
   }
 }
 

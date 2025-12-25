@@ -4,8 +4,8 @@ const axios = require('axios');
 class CaseController {
   async create(req, res) {
     try {
-      const userId = req.user.uid;
-      const newCase = await processoService.createCase(req.body, userId);
+      const user = req.user;
+      const newCase = await processoService.createCase(req.body, user);
       res.status(201).json(newCase);
     } catch (error) {
       console.error('!!! ERRO no Controller:', error);
@@ -39,26 +39,24 @@ class CaseController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      console.log("LOG 1: Controller - Iniciando PUT. ID do Processo:", id); // PONTO 1
-      const updatedCase = await processoService.updateProcesso(id, req.body, req.user.uid);
-      console.log("LOG 4: Controller - Sucesso. Retornando 200."); // PONTO 4
+      const user = req.user; // Contém uid e role
+      const updatedCase = await processoService.updateProcesso(id, req.body, user);
       res.status(200).json(updatedCase);
     } catch (error) {
-      console.error("--- ERRO FATAL UPDATE PROCESSO ---", error);
-      if (error.message.includes('não encontrado') || error.message.includes('permissão')) {
-        return res.status(404).json({ message: error.message });
-      }
-      res.status(500).json({ message: 'Erro ao atualizar processo.', error: error.message });
+      const statusCode = error.message.includes('Permissão') ? 403 : 404;
+      res.status(statusCode).json({ message: error.message });
     }
   }
 
   async delete(req, res) {
     try {
       const { id } = req.params;
-      await processoService.deleteCase(id, req.user.uid);
-      res.status(204).send(); // 204 No Content é a resposta padrão para delete com sucesso
+      const user = req.user;
+      await processoService.deleteCase(id, user);
+      res.status(204).send();
     } catch (error) {
-      res.status(404).json({ message: error.message });
+      const statusCode = error.message.includes('Permissão') ? 403 : 404;
+      res.status(statusCode).json({ message: error.message });
     }
   }
 
@@ -79,18 +77,17 @@ class CaseController {
     try {
       const { processoId } = req.params;
       const { descricao } = req.body;
-      const userId = req.user.uid;
+      const user = req.user;
 
       if (!descricao) {
-        return res.status(400).json({ message: 'A descrição da movimentação é obrigatória.' });
+        return res.status(400).json({ message: 'A descrição é obrigatória.' });
       }
 
-      const novaMovimentacao = await processoService.addMovimentacao(processoId, { descricao }, userId);
-
+      const novaMovimentacao = await processoService.addMovimentacao(processoId, { descricao }, user);
       res.status(201).json(novaMovimentacao);
     } catch (error) {
-      console.error("!!! ERRO AO ADICIONAR MOVIMENTAÇÃO:", error);
-      res.status(500).json({ message: 'Erro interno ao adicionar movimentação.' });
+      const statusCode = error.message.includes('Permissão') ? 403 : 500;
+      res.status(statusCode).json({ message: error.message });
     }
   }
 

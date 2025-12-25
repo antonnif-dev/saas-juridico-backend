@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+
+// Importação das Rotas
 const clientRoutes = require('./api/routes/client.routes');
 const userRoutes = require('./api/routes/user.routes');
 const caseRoutes = require('./api/routes/case.routes');
@@ -17,13 +19,16 @@ const financialRoutes = require('./api/routes/financial.routes');
 const aiRoutes = require('./api/routes/ai.routes');
 const notificationRoutes = require('./api/routes/notification.routes');
 
+// Middleware de Autenticação
+const authMiddleware = require('./api/middlewares/auth.middleware');
+
 const app = express();
 app.set('trust proxy', 1);
+
 const corsOptions = {
-  origin: ['http://localhost:5173', // A porta EXATA do seu frontend Vite
-  'https://saas-juridico-frontend.vercel.app'], // Adicionamos a URL de produção
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'], // Headers permitidos
+  origin: ['http://localhost:5173', 'https://saas-juridico-frontend.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
@@ -34,30 +39,39 @@ const limiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: 1, //adcionado como teste
+  trustProxy: 1,
 });
 
 app.use(limiter);
 app.use(express.json());
-app.use('/api/clients', clientRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/processo', (req, res, next) => {
-  console.log(`--- Requisição recebida em /api/processo: ${req.method} ${req.url} ---`);
-  next();
-});
-app.use('/api/processo', caseRoutes);
-app.use('/api/agenda', agendaRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/webhooks', webhookRoutes);
-app.use('/api/portal', portalRoutes);
-app.use('/api/theme', themeRoutes);
-app.use('/api/mensagens', messageRoutes);
-app.use('/api/preatendimento', preatendimentoRoutes);
-app.use('/api/financial', financialRoutes);
-app.use('/api/ai', aiRoutes);
+
+// --- 1. ROTAS PÚBLICAS OU DE SISTEMA ---
 app.get('/', (req, res) => {
   res.status(200).send({ message: 'API do SaaS Jurídico no ar!' });
 });
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/theme', themeRoutes); // Tema é leitura pública para o Layout
+
+// --- 2. ROTAS HÍBRIDAS (ACESSO: TODOS LOGADOS) ---
+// Processos: Todos veem, mas o Service/Controller já protege a edição
+app.use('/api/processo', authMiddleware(['administrador', 'advogado', 'cliente']), caseRoutes);
+app.use('/api/mensagens', authMiddleware(['administrador', 'advogado', 'cliente']), messageRoutes);
+app.use('/api/portal', authMiddleware(['administrador', 'advogado', 'cliente']), portalRoutes);
+
+// --- 3. ROTAS DE STAFF (ACESSO: ADMIN E ADVOGADO) ---
+const staffOnly = authMiddleware(['administrador', 'advogado']);
+
+app.use('/api/clients', staffOnly, clientRoutes);
+app.use('/api/agenda', staffOnly, agendaRoutes);
+app.use('/api/preatendimento', staffOnly, preatendimentoRoutes);
+app.use('/api/notifications', staffOnly, notificationRoutes);
+app.use('/api/dashboard', staffOnly, dashboardRoutes);
+app.use('/api/ai', staffOnly, aiRoutes);
+
+// --- 4. ROTAS EXCLUSIVAS (ACESSO: APENAS ADMINISTRADOR) ---
+const adminOnly = authMiddleware(['administrador']);
+
+app.use('/api/users', adminOnly, userRoutes);
+app.use('/api/financial', adminOnly, financialRoutes);
 
 module.exports = app;

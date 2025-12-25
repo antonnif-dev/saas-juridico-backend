@@ -19,7 +19,7 @@ const authMiddleware = (allowedRoles = []) => {
         email: decodedToken.email,
         name: decodedToken.name || decodedToken.displayName,
         role: decodedToken.role || 'cliente', // Fallback caso a claim não exista
-        ...decodedToken // Mantém o restante das claims
+        isAdmin: decodedToken.role === 'administrador'
       };
 
       const userRole = req.user.role;

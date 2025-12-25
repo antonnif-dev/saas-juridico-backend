@@ -6,9 +6,18 @@ class ProcessoRepository {
     return db.collection('processo');
   }
 
+  movimentacoesCollection(processoId) {
+    return this.collection.doc(processoId).collection('movimentacoes');
+  }
+
   async create(data) {
     const docRef = await this.collection.add(data);
     return { id: docRef.id, ...data };
+  }
+
+  async findAll() {
+    const snapshot = await this.collection.orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
   async findAllByOwner(userId) {
@@ -30,9 +39,8 @@ class ProcessoRepository {
     const updatePayload = {
       ...data,
       updatedAt: FieldValue.serverTimestamp(),
-    };    
-    await this.collection.doc(id).update(updatePayload);    
-    const updatedDoc = await this.collection.doc(id).get();
+    };
+    await this.collection.doc(id).update(updatePayload);
     return { id: updatedDoc.id, ...updatedDoc.data() };
   }
 
@@ -46,7 +54,10 @@ class ProcessoRepository {
   }
 
   async addMovimentacao(processoId, movimentacaoData) {
-    const movimentacaoRef = await this.movimentacoesCollection(processoId).add(movimentacaoData);
+    const movimentacaoRef = await this.movimentacoesCollection(processoId).add({
+      ...movimentacaoData,
+      data: FieldValue.serverTimestamp()
+    });
     return { id: movimentacaoRef.id, ...movimentacaoData };
   }
 
@@ -66,10 +77,10 @@ class ProcessoRepository {
   }
 
   async addDocument(caseId, docData) {
-    const { FieldValue } = require('firebase-admin/firestore');
     await this.collection.doc(caseId).update({
       documentos: FieldValue.arrayUnion(docData)
     });
+    return docData;
   }
 
 }

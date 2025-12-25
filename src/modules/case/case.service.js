@@ -12,11 +12,20 @@ class ProcessoService {
    * @returns {Promise<object>} O novo processo criado.
    */
 
-  async createProcesso(processoData, userId) { // <-- NOME DO MÉTODO CORRIGIDO
+  async _validateWritePermission(processoId, user) {
+    const processo = await processoRepository.findById(processoId);
+    if (!processo) throw new Error('Processo não encontrado.');
+    if (user.role === 'administrador') return processo;
+    const isResponsavel = processo.responsavelUid === user.uid;
+    if (user.role === 'advogado' && isResponsavel) return processo;
+    throw new Error('Permissão insuficiente: apenas o advogado responsável ou administradores podem alterar este processo.');
+  }
+
+  async createProcesso(processoData, user) { // <-- NOME DO MÉTODO CORRIGIDO
     const dataToSave = {
       ...processoData,
-      createdBy: userId,
-      responsavelUid: userId,
+      createdBy: user.uid,
+      responsavelUid: user.uid,
       createdAt: new Date(),
       documentos: [],
       movimentacoes: [],
@@ -56,12 +65,9 @@ class ProcessoService {
     throw new Error('Acesso não permitido a este processo.');
   }
 
-  async updateProcesso(processoId, dataToUpdate, userId) {
-    console.log("LOG 2: Service - Recebido. ProcessoID:", processoId, "Payload:", JSON.stringify(dataToUpdate)); // PONTO 2
-    await this.getProcessoById(processoId, userId);
-    const result = await processoRepository.update(processoId, dataToUpdate);
-    console.log("LOG 3: Service - Repositório executado com sucesso."); // PONTO 3
-    return result;
+  async updateProcesso(processoId, dataToUpdate, user) {
+    await this._validateWritePermission(processoId, user);
+    return await processoRepository.update(processoId, dataToUpdate);
   }
 
   async updateItem(processoId, data, userId) {
@@ -72,9 +78,9 @@ class ProcessoService {
     return this.deleteProcesso(processoId, userId);
   }
 
-  async deleteProcesso(processoId, userId) {
-    await this.getProcessoById(processoId, userId);
-    return processoRepository.delete(processoId);
+  async deleteProcesso(processoId, user) {
+    await this._validateWritePermission(processoId, user);
+    return await processoRepository.delete(processoId);
   }
 
   async uploadDocumentToCase(processoId, file, user) {
@@ -125,13 +131,14 @@ class ProcessoService {
     return await processoRepository.findAllByClientId(clientId);
   }
 
-  async addMovimentacao(processoId, movimentacaoData, userId) {
+  async addMovimentacao(processoId, movimentacaoData, user) {
+    await this._validateWritePermission(processoId, user);
+
     const dataToSave = {
       ...movimentacaoData,
       data: new Date(),
-      criadoPor: userId,
+      criadoPor: user.uid,
     };
-
     return await processoRepository.addMovimentacao(processoId, dataToSave);
   }
 
@@ -139,15 +146,22 @@ class ProcessoService {
     return await processoRepository.findAllMovimentacoes(processoId);
   }
 
-  async updateMovimentacao(processoId, movimentacaoId, movimentacaoData) {
+  async updateMovimentacao(processoId, movimentacaoId, movimentacaoData, user) {
+    await this._validateWritePermission(processoId, user);
     return await processoRepository.updateMovimentacao(processoId, movimentacaoId, movimentacaoData);
   }
 
-  async deleteMovimentacao(processoId, movimentacaoId) {
+  async deleteMovimentacao(processoId, movimentacaoId, user) {
+    await this._validateWritePermission(processoId, user);
     return await processoRepository.deleteMovimentacao(processoId, movimentacaoId);
   }
 
   async uploadDocumentToCase(processoId, file, user) {
+    if (!file) throw new Error('Nenhum arquivo enviado.');
+
+    // Valida permissão antes de iniciar o stream para o Cloudinary
+    await this._validateWritePermission(processoId, user);
+
     return new Promise((resolve, reject) => {
       const uploadOptions = {
         folder: `documentos/${processoId}`,
@@ -155,9 +169,7 @@ class ProcessoService {
       };
 
       const stream = cloudinary.uploader.upload_stream(uploadOptions, async (error, result) => {
-        if (error) {
-          return reject(error);
-        }
+        if (error) return reject(error);
 
         const documentRecord = {
           id: uuidv4(),
