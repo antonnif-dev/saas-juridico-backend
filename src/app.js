@@ -63,8 +63,8 @@ const staffOnly = authMiddleware(['administrador', 'advogado']);
 
 app.use('/api/clients', staffOnly, clientRoutes);
 app.use('/api/agenda', staffOnly, agendaRoutes);
-app.use('/api/preatendimento', staffOnly, preatendimentoRoutes);
-app.use('/api/notifications', staffOnly, notificationRoutes);
+app.use('/api/preatendimento', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoRoutes);
+app.use('/api/notifications', authMiddleware(['administrador', 'advogado', 'cliente']), notificationRoutes);
 app.use('/api/dashboard', staffOnly, dashboardRoutes);
 app.use('/api/ai', staffOnly, aiRoutes);
 
@@ -72,6 +72,6 @@ app.use('/api/ai', staffOnly, aiRoutes);
 const adminOnly = authMiddleware(['administrador']);
 
 app.use('/api/users', adminOnly, userRoutes);
-app.use('/api/financial', adminOnly, financialRoutes);
+app.use('/api/financial', authMiddleware(['administrador', 'cliente']), financialRoutes);
 
 module.exports = app;
