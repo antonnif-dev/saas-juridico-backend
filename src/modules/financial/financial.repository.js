@@ -1,30 +1,38 @@
 const { db } = require('../../config/firebase.config');
-const collection = db.collection('transactions');
 
 class FinancialRepository {
+  constructor() {
+    this.collection = db.collection('financial');
+  }
+
   async create(data) {
-    const docRef = await collection.add({
-      ...data,
-      createdAt: new Date(),
-      status: data.status || 'pending' // pending, paid, overdue
-    });
+    const docRef = await this.collection.add(data);
     return { id: docRef.id, ...data };
   }
 
-  async findAllByUser(userId) {
-    // Busca transações onde o advogado é o responsável (ou o cliente vinculado)
-    // Simplificado para buscar tudo por enquanto
-    const snapshot = await collection.orderBy('createdAt', 'desc').get();
+  async findAll() {
+    const snapshot = await this.collection.orderBy('dataVencimento', 'desc').get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async findByCase(processoId) {
-    const snapshot = await collection.where('processoId', '==', processoId).get();
+  async findAllByClient(clientId) {
+    const snapshot = await this.collection
+      .where('clientId', '==', clientId)
+      .orderBy('dataVencimento', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  // MÉTODO CHAVE PARA O RELATÓRIO FINAL
+  async findAllByProcess(processoId) {
+    const snapshot = await this.collection
+      .where('processoId', '==', processoId)
+      .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
   async update(id, data) {
-    await collection.doc(id).update(data);
+    await this.collection.doc(id).update(data);
     return { id, ...data };
   }
 }

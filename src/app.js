@@ -57,6 +57,8 @@ app.use('/api/theme', themeRoutes); // Tema é leitura pública para o Layout
 app.use('/api/processo', authMiddleware(['administrador', 'advogado', 'cliente']), caseRoutes);
 app.use('/api/mensagens', authMiddleware(['administrador', 'advogado', 'cliente']), messageRoutes);
 app.use('/api/portal', authMiddleware(['administrador', 'advogado', 'cliente']), portalRoutes);
+app.use('/api/financial', authMiddleware(['administrador', 'advogado', 'cliente']), financialRoutes);
+app.use('/api/financial', financialRoutes);
 
 // --- 3. ROTAS DE STAFF (ACESSO: ADMIN E ADVOGADO) ---
 const staffOnly = authMiddleware(['administrador', 'advogado']);
@@ -73,5 +75,6 @@ const adminOnly = authMiddleware(['administrador']);
 
 app.use('/api/users', userRoutes);
 app.use('/api/financial', authMiddleware(['administrador', 'cliente']), financialRoutes);
+
 
 module.exports = app;

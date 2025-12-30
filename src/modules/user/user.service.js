@@ -147,6 +147,7 @@ class UserService {
    */
   async uploadProfilePhoto(userId, file) {
     const cloudinary = require('../../config/cloudinary.config');
+
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
@@ -156,15 +157,21 @@ class UserService {
           transformation: [{ width: 500, height: 500, crop: "fill" }]
         },
         async (error, result) => {
-          if (error) return reject(error);
-          await auth.updateUser(userId, { photoURL: result.secure_url });
-
-          // Sincroniza a URL da foto no Firestore também
-          await userRepository.update(userId, { photoUrl: result.secure_url });
-
-          resolve({ photoUrl: result.secure_url });
+          if (error) {
+            console.error("Erro no Cloudinary:", error);
+            return reject(error);
+          }
+          try {
+            await auth.updateUser(userId, { photoURL: result.secure_url });
+            await userRepository.update(userId, { photoUrl: result.secure_url });
+            resolve({ photoUrl: result.secure_url });
+          } catch (syncError) {
+            console.error("Erro na sincronização de dados da foto:", syncError);
+            reject(syncError);
+          }
         }
       );
+
       uploadStream.end(file.buffer);
     });
   }

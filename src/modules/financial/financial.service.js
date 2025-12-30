@@ -1,21 +1,32 @@
-const repository = require('./financial.repository');
+const financialRepository = require('./financial.repository');
 
 class FinancialService {
-  async createTransaction(data, userId) {
-    // data: { titulo, valor, tipo (honorario/despesa), processoId, clienteId, vencimento }
-    return await repository.create({ ...data, createdBy: userId });
+  async createTransaction(data, user) {
+    const transactionData = {
+      ...data,
+      criadoPor: user.uid,
+      status: data.status || 'pending',
+      createdAt: new Date()
+    };
+    return await financialRepository.create(transactionData);
   }
 
-  async getTransactions(userId) {
-    return await repository.findAllByUser(userId);
+  async getTransactions(user) {
+    // Se for cliente, vê só as dele. Se for staff, vê tudo.
+    if (user.role === 'cliente') {
+      return await financialRepository.findAllByClient(user.uid);
+    }
+    return await financialRepository.findAll();
   }
 
-  async getTransactionsByCase(processoId) {
-    return await repository.findByCase(processoId);
-  }
-
-  async markAsPaid(id) {
-    return await repository.update(id, { status: 'paid', paidAt: new Date() });
+  async getFinancialSummary(user) {
+    const txs = await this.getTransactions(user);
+    
+    return {
+      totalPendente: txs.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.valor, 0),
+      totalPagoMes: txs.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.valor, 0), // Filtrar por mês atual
+      totalAtrasado: txs.filter(t => t.status === 'overdue').reduce((acc, t) => acc + t.valor, 0)
+    };
   }
 }
 

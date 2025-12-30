@@ -1,12 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/financial.controller');
+const financialController = require('../controllers/financial.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 
-router.use(authMiddleware(['administrador', 'advogado', 'cliente']));
+// Listagem e Resumo (Acesso: Admin, Advogado e Cliente)
+// O Service garantirá que o cliente veja apenas suas próprias faturas
+router.get('/transactions', authMiddleware(['administrador', 'advogado', 'cliente']), financialController.list);
 
-router.post('/', controller.create);
-router.get('/', controller.list); // Aceita query param ?processoId=...
-router.put('/:id/pay', controller.pay);
+// Criação de Lançamentos (Acesso: Apenas Staff)
+router.post('/transactions', authMiddleware(['administrador', 'advogado']), financialController.create);
+
+// Atualização de Status (Ex: Marcar como pago)
+router.patch('/transactions/:id/status', authMiddleware(['administrador', 'advogado']), financialController.updateStatus);
 
 module.exports = router;
