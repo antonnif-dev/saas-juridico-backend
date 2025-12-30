@@ -76,5 +76,10 @@ const adminOnly = authMiddleware(['administrador']);
 app.use('/api/users', userRoutes);
 app.use('/api/financial', authMiddleware(['administrador', 'cliente']), financialRoutes);
 
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://seu-dominio-frontend.vercel.app'], // Permite seu local e seu deploy
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Adicione PATCH e OPTIONS aqui
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 module.exports = app;
