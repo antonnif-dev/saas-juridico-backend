@@ -11,4 +11,6 @@ router.patch('/transactions/:id/status', authMiddleware(['administrador', 'advog
 
 router.patch('/transactions/:id/pay', authMiddleware(['administrador', 'advogado']), financialController.payTransaction);
 
+router.post('/transactions/:id/pay', authMiddleware(['administrador', 'advogado']), financialController.payTransaction);
+
 module.exports = router;
