@@ -33,20 +33,34 @@ class MessageService {
   async getConversations(currentUserId) {
     const conversations = await messageRepository.getUserConversations(currentUserId);
 
-    // Enriquece as conversas com os nomes dos participantes
     const enriched = await Promise.all(conversations.map(async (conv) => {
+      // Encontra o ID da outra pessoa na conversa
       const otherUserId = conv.participants.find(id => id !== currentUserId);
+
+      if (!otherUserId) {
+        return { ...conv, participant: { name: 'Sistema', photoURL: null } };
+      }
+
       try {
         const userRecord = await auth.getUser(otherUserId);
         return {
           ...conv,
           participant: {
             uid: userRecord.uid,
-            name: userRecord.displayName || userRecord.email
+            name: userRecord.displayName || userRecord.email.split('@')[0],
+            photoURL: userRecord.photoURL || null // CAMPO ESSENCIAL PARA A FOTO
           }
         };
       } catch (e) {
-        return { ...conv, participant: { name: 'Usuário Desconhecido' } };
+        console.error(`Erro ao buscar usuário ${otherUserId}:`, e.message);
+        // Fallback para não quebrar a listagem, mas indicando que é um usuário da base
+        return {
+          ...conv,
+          participant: {
+            name: 'Usuário Externo',
+            photoURL: null
+          }
+        };
       }
     }));
 
