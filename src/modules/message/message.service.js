@@ -4,29 +4,31 @@ const { auth } = require('../../config/firebase.config');
 class MessageService {
   async startConversation(currentUserId, participantId) {
     try {
-      const userRecord = await auth.getUser(otherUserId);
-      return {
-        ...conv,
-        participant: {
-          uid: userRecord.uid,
-          name: userRecord.displayName || userRecord.email,
-          photoURL: userRecord.photoURL || null // <--- ADICIONE ESTA LINHA
-        }
-      };
+      // 1. Busca os dados do participante no Firebase Auth
+      // Ajustado de otherUserId para participantId (o parâmetro da função)
+      const userRecord = await auth.getUser(participantId);
 
+      // 2. Chama o repositório para buscar ou criar a conversa no Firestore
       const conversation = await messageRepository.findOrCreateConversation(currentUserId, participantId);
 
+      // 3. Retorna um único objeto consolidado
       return {
         ...conversation,
         participant: {
           uid: userRecord.uid,
-          name: userRecord.displayName || userRecord.email,
-          photoURL: userRecord.photoURL || null // Adicionando suporte à foto
+          name: userRecord.displayName || userRecord.email.split('@')[0],
+          photoURL: userRecord.photoURL || null
         }
       };
     } catch (error) {
       console.error("Erro ao validar usuário participante:", error);
-      return await messageRepository.findOrCreateConversation(currentUserId, participantId);
+
+      // Fallback: Se o Auth falhar, tenta retornar ao menos a conversa bruta
+      const conversation = await messageRepository.findOrCreateConversation(currentUserId, participantId);
+      return {
+        ...conversation,
+        participant: { name: 'Usuário', photoURL: null }
+      };
     }
   }
 
