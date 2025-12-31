@@ -4,15 +4,14 @@ const conversationsCollection = db.collection('conversations');
 class MessageRepository {
   // Cria ou busca uma conversa existente
   async findOrCreateConversation(userId, participantId) {
-    // Tenta encontrar uma conversa onde os dois usuários sejam participantes
-    // Nota: Em produção, idealmente usamos um ID composto ou array-contains, 
-    // mas aqui faremos uma criação simples para funcionar.
+    // Busca as conversas do usuário atual
     const snapshot = await conversationsCollection
       .where('participants', 'array-contains', userId)
       .get();
 
     let existingConv = null;
-    
+
+    // Refina a busca na memória para evitar necessidade de índices compostos complexos agora
     snapshot.forEach(doc => {
       const data = doc.data();
       if (data.participants.includes(participantId)) {
@@ -22,13 +21,13 @@ class MessageRepository {
 
     if (existingConv) return existingConv;
 
-    // Se não existe, cria uma nova
     const newConvData = {
       participants: [userId, participantId],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       lastMessage: ''
     };
+
     const docRef = await conversationsCollection.add(newConvData);
     return { id: docRef.id, ...newConvData };
   }
@@ -39,16 +38,16 @@ class MessageRepository {
       .where('participants', 'array-contains', userId)
       .orderBy('updatedAt', 'desc')
       .get();
-      
+
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
   async addMessage(conversationId, messageData) {
     const conversationRef = conversationsCollection.doc(conversationId);
-    
+
     // 1. Adiciona a mensagem na subcoleção 'messages'
     const messageRef = await conversationRef.collection('messages').add(messageData);
-    
+
     // 2. Atualiza a conversa com a última mensagem e data
     await conversationRef.update({
       lastMessage: messageData.content,
@@ -65,7 +64,7 @@ class MessageRepository {
       .collection('messages')
       .orderBy('createdAt', 'asc')
       .get();
-      
+
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 }

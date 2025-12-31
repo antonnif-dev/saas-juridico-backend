@@ -3,19 +3,36 @@ const { auth } = require('../../config/firebase.config');
 
 class MessageService {
   async startConversation(currentUserId, participantId) {
-    // Busca dados do participante para garantir que existe (opcional, mas bom)
-    await auth.getUser(participantId);
-    
-    const conversation = await messageRepository.findOrCreateConversation(currentUserId, participantId);
-    
-    // Aqui poderíamos enriquecer o objeto com os nomes dos usuários, 
-    // mas retornaremos a conversa bruta por enquanto.
-    return conversation;
+    try {
+      const userRecord = await auth.getUser(otherUserId);
+      return {
+        ...conv,
+        participant: {
+          uid: userRecord.uid,
+          name: userRecord.displayName || userRecord.email,
+          photoURL: userRecord.photoURL || null // <--- ADICIONE ESTA LINHA
+        }
+      };
+
+      const conversation = await messageRepository.findOrCreateConversation(currentUserId, participantId);
+
+      return {
+        ...conversation,
+        participant: {
+          uid: userRecord.uid,
+          name: userRecord.displayName || userRecord.email,
+          photoURL: userRecord.photoURL || null // Adicionando suporte à foto
+        }
+      };
+    } catch (error) {
+      console.error("Erro ao validar usuário participante:", error);
+      return await messageRepository.findOrCreateConversation(currentUserId, participantId);
+    }
   }
 
   async getConversations(currentUserId) {
     const conversations = await messageRepository.getUserConversations(currentUserId);
-    
+
     // Enriquece as conversas com os nomes dos participantes
     const enriched = await Promise.all(conversations.map(async (conv) => {
       const otherUserId = conv.participants.find(id => id !== currentUserId);
@@ -43,7 +60,7 @@ class MessageService {
       createdAt: new Date().toISOString(), // Use string ISO para facilitar no frontend
       read: false
     };
-    
+
     return await messageRepository.addMessage(conversationId, messageData);
   }
 
@@ -51,7 +68,7 @@ class MessageService {
     return await messageRepository.getMessages(conversationId);
   }
 
-  
+
 }
 
 module.exports = new MessageService();
