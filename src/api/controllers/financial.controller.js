@@ -14,9 +14,17 @@ class FinancialController {
       };
 
       transactions.forEach(txn => {
-        if (txn.status === 'pending') summary.totalPendente += txn.valor;
-        else if (txn.status === 'paid') summary.totalPago += txn.valor;
-        else if (txn.status === 'overdue') summary.totalAtrasado += txn.valor;
+        const valor = txn.valor || 0;
+        const isDespesa = txn.tipo === 'despesa';
+
+        if (txn.status === 'pending') {
+          summary.totalPendente += valor;
+        } else if (txn.status === 'paid') {
+          // Se for despesa, subtrai do total pago para dar o saldo real de caixa
+          summary.totalPago += isDespesa ? -valor : valor;
+        } else if (txn.status === 'overdue') {
+          summary.totalAtrasado += valor;
+        }
       });
 
       res.status(200).json({
@@ -69,6 +77,18 @@ class FinancialController {
     } catch (error) {
       console.error("Erro ao pagar transação:", error);
       res.status(500).json({ message: 'Erro ao processar pagamento.' });
+    }
+  }
+
+  async listByProcess(req, res) {
+    try {
+      const { processoId } = req.params;
+      // Aqui chamamos o service passando o filtro de processo
+      const transactions = await financialService.getTransactionsByProcess(processoId);
+      res.status(200).json(transactions);
+    } catch (error) {
+      console.error("Erro ao listar financeiro por processo:", error);
+      res.status(500).json({ message: 'Erro ao buscar dados do processo.' });
     }
   }
 }

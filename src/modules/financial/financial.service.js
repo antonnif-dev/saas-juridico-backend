@@ -61,6 +61,10 @@ class FinancialService {
       extrato: txns
     };
   }
+
+  async getTransactionsByProcess(processoId) {
+    return await financialRepository.findAllByProcess(processoId);
+  }
 }
 
 module.exports = new FinancialService();

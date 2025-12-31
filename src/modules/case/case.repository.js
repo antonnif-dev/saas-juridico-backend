@@ -40,8 +40,11 @@ class ProcessoRepository {
       ...data,
       updatedAt: FieldValue.serverTimestamp(),
     };
+    if (['Encerrado', 'Arquivado', 'Concluído'].includes(data.status)) {
+      updatePayload.dataEncerramento = FieldValue.serverTimestamp();
+    }
     await this.collection.doc(id).update(updatePayload);
-    return { id: updatedDoc.id, ...updatedDoc.data() };
+    return { id, ...updatePayload };
   }
 
   async delete(id) {
