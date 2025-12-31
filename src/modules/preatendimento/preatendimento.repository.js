@@ -43,83 +43,14 @@ class PreAtendimentoRepository {
 
   // Método de Conversão
   async convertToCase(id, data, adminId) {
-    // 1. Gera senha
-    const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
-    let uid;
+    let uid = data.clientId; // ID vindo do frontend (vínculo manual ou cliente logado)
+    let tempPassword = null;
 
-    // 2. Cria ou busca usuário
-    try {
-      const userRecord = await auth.createUser({
-        email: data.email,
-        password: tempPassword,
-        displayName: data.nome,
-      });
-      uid = userRecord.uid;
-      await auth.setCustomUserClaims(uid, { role: 'cliente', clientId: uid });
-    } catch (error) {
-      if (error.code === 'auth/email-already-exists') {
-         const existingUser = await auth.getUserByEmail(data.email);
-         uid = existingUser.uid;
-         // Atualiza senha para garantir acesso
-         await auth.updateUser(uid, { password: tempPassword });
-      } else {
-        throw error;
-      }
-    }
-
-    const batch = db.batch();
-
-    // 3. Cliente
-    const clientRef = clientsCollection.doc(uid);
-    const clientData = {
-      name: data.nome, email: data.email, cpfCnpj: data.cpfCnpj,
-      phone: data.telefone, address: data.endereco, status: 'ativo',
-      createdAt: new Date(), convertedFrom: id
-    };
-    batch.set(clientRef, clientData, { merge: true });
-
-    // 4. Processo
-    const caseRef = processosCollection.doc();
-    const processoData = {
-      titulo: `Caso: ${data.categoria}`,
-      descricao: data.resumoProblema,
-      clientId: uid,
-      responsavelUid: adminId,
-      status: 'Em andamento',
-      area: data.categoria,
-      createdAt: new Date(),
-      urgencia: data.urgencia,
-      numeroProcesso: null,
-      // Copia dados da negociação se existirem
-      valorAcordado: data.proposalValue || null,
-      assinatura: data.signature || null,
-      anexos: [...(data.clientFiles || []), ...(data.adminFiles || [])]
-    };
-    batch.set(caseRef, processoData);
-
-    // 5. Atualiza status
-    const preRef = collection.doc(id);
-    batch.update(preRef, { status: 'Convertido', relatedProcessoId: caseRef.id });
-
-    await batch.commit();
-
-    return { 
-      success: true, 
-      tempPassword: tempPassword,
-      clientId: uid,
-      processoId: caseRef.id
-    };
-  }
-}
-
-module.exports = new PreAtendimentoRepository();
-
-  /*
-    async convertToCase(id, data, adminId) {
-      const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
-      let uid;
-  
+    // 1. Lógica de Identificação de Usuário
+    if (!uid) {
+      // Se não temos UID, tentamos criar ou buscar por e-mail
       try {
+        tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
         const userRecord = await auth.createUser({
           email: data.email,
           password: tempPassword,
@@ -131,54 +62,61 @@ module.exports = new PreAtendimentoRepository();
         if (error.code === 'auth/email-already-exists') {
           const existingUser = await auth.getUserByEmail(data.email);
           uid = existingUser.uid;
-          await auth.updateUser(uid, {
-            password: tempPassword,
-            displayName: data.nome
-          });
+          // IMPORTANTE: Não resetamos a senha aqui para não deslogar um cliente ativo
+          tempPassword = "Utilize sua senha já cadastrada.";
         } else {
           throw error;
         }
       }
-  
-      const batch = db.batch();
-  
-      const clientRef = clientsCollection.doc(uid);
-      const clientData = {
-        name: data.nome,
-        email: data.email,
-        cpfCnpj: data.cpfCnpj,
-        phone: data.telefone,
-        address: data.endereco,
-        status: 'ativo',
-        createdAt: new Date(),
-        convertedFrom: id
-      };
-      batch.set(clientRef, clientData, { merge: true });
-  
-      const caseRef = casesCollection.doc();
-      const processoData = {
-        titulo: `Caso: ${data.categoria}`,
-        descricao: data.resumoProblema,
-        clientId: clientRef.id,
-        responsavelUid: adminId,
-        status: 'Em andamento',
-        area: data.categoria,
-        createdAt: new Date(),
-        urgencia: data.urgencia,
-        numeroProcesso: 'Aguardando Distribuição'
-      };
-      batch.set(caseRef, processoData);
-  
-      const preRef = collection.doc(id);
-      batch.update(preRef, { status: 'Convertido', relatedprocessoId: caseRef.id });
-  
-      await batch.commit();
-      return {
-        success: true,
-        tempPassword: tempPassword,
-        isNewUser: true,
-        clientId: uid,
-        processoId: caseRef.id
-      };
     }
-  */
+
+    const batch = db.batch();
+
+    // 2. Cliente (Usa merge: true para não sobrescrever dados antigos do cliente)
+    const clientRef = clientsCollection.doc(uid);
+    const clientData = {
+      name: data.nome,
+      email: data.email,
+      cpfCnpj: data.cpfCnpj,
+      phone: data.telefone,
+      address: data.endereco,
+      status: 'ativo',
+      updatedAt: FieldValue.serverTimestamp(), // Mudamos para updatedAt se já existir
+      convertedFrom: FieldValue.arrayUnion(id) // Registra que este pré-atendimento gerou um caso
+    };
+    batch.set(clientRef, clientData, { merge: true });
+
+    // 3. Processo (Mantém sua lógica, mas garante o clientId correto)
+    const caseRef = processosCollection.doc();
+    const processoData = {
+      titulo: `Caso: ${data.categoria}`,
+      descricao: data.resumoProblema,
+      clientId: uid,
+      responsavelUid: adminId,
+      status: 'Em andamento',
+      area: data.categoria,
+      createdAt: FieldValue.serverTimestamp(),
+      urgencia: data.urgencia,
+      numeroProcesso: null,
+      valorAcordado: data.proposalValue || null,
+      assinatura: data.signature || null,
+      anexos: [...(data.clientFiles || []), ...(data.adminFiles || [])]
+    };
+    batch.set(caseRef, processoData);
+
+    // 4. Atualiza status do Pré-Atendimento
+    const preRef = collection.doc(id);
+    batch.update(preRef, { status: 'Convertido', relatedProcessoId: caseRef.id });
+
+    await batch.commit();
+
+    return {
+      success: true,
+      tempPassword: tempPassword, // Retornará null ou o aviso se for cliente antigo
+      clientId: uid,
+      processoId: caseRef.id
+    };
+  }
+}
+
+module.exports = new PreAtendimentoRepository();
