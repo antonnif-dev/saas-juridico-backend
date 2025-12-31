@@ -1,5 +1,6 @@
 const messageRepository = require('./message.repository');
 const { auth } = require('../../config/firebase.config');
+const userRepository = require('../user/user.repository');
 
 class MessageService {
   async startConversation(currentUserId, participantId) {
@@ -36,7 +37,7 @@ class MessageService {
     const conversations = await messageRepository.getUserConversations(currentUserId);
 
     const enriched = await Promise.all(conversations.map(async (conv) => {
-      // Encontra o ID da outra pessoa na conversa
+      // 1. Identifica o outro participante
       const otherUserId = conv.participants.find(id => id !== currentUserId);
 
       if (!otherUserId) {
@@ -44,18 +45,29 @@ class MessageService {
       }
 
       try {
-        const userRecord = await auth.getUser(otherUserId);
+        // 2. Busca dados de Acesso (Auth) e dados de Perfil (Firestore) em paralelo
+        // Isso é mais performático
+        const [userRecord, dbUserDoc] = await Promise.all([
+          auth.getUser(otherUserId),
+          db.collection('users').doc(otherUserId).get()
+        ]);
+
+        const userData = dbUserDoc.exists ? dbUserDoc.data() : {};
+
         return {
           ...conv,
           participant: {
             uid: userRecord.uid,
-            name: userRecord.displayName || userRecord.email.split('@')[0],
-            photoURL: userRecord.photoURL || null // CAMPO ESSENCIAL PARA A FOTO
+            // Prioriza o nome do banco de dados (Firestore), depois displayName do Auth
+            name: userData.name || userRecord.displayName || userRecord.email.split('@')[0],
+            // Prioriza a foto do Cloudinary (photoUrl), depois a do Auth
+            photoURL: userData.photoUrl || userRecord.photoURL || null
           }
         };
       } catch (e) {
-        console.error(`Erro ao buscar usuário ${otherUserId}:`, e.message);
-        // Fallback para não quebrar a listagem, mas indicando que é um usuário da base
+        console.error(`Erro ao enriquecer conversa para o usuário ${otherUserId}:`, e.message);
+
+        // Fallback robusto caso o usuário não seja encontrado no Auth
         return {
           ...conv,
           participant: {
