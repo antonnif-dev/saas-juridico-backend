@@ -30,14 +30,6 @@ class PreAtendimentoService {
   }
 
   async convert(id, data, adminId) {
-    let existingClientId = data.clientId;
-
-    if (!existingClientId && data.email) {
-      const clientRepo = require('../clientes/client.repository'); // ajuste o caminho
-      const existingClient = await clientRepo.findByEmail(data.email);
-      if (existingClient) existingClientId = existingClient.id;
-    }
-
     return await repository.convertToCase(id, data, adminId);
   }
 
