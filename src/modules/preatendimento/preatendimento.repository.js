@@ -20,6 +20,11 @@ class PreAtendimentoRepository {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async findAllByClientId(clientId) {
+    const snapshot = await collection.where('clientId', '==', clientId).orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
   async updateStatus(id, status) {
     await collection.doc(id).update({ status });
   }

@@ -13,7 +13,7 @@ class AgendaController {
   async list(req, res) {
   try {
     //const items = await agendaService.getItemsForUser(req.user.uid);
-    const items = await agendaService.listItemsForUser(req.user.uid);
+    const items = await agendaService.listItemsForUser(req.user);
     const formattedItems = items.map(item => ({
       ...item,
       dataHora: item.dataHora.toDate().toISOString(),

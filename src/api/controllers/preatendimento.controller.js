@@ -12,7 +12,7 @@ class PreAtendimentoController {
 
   async list(req, res) {
     try {
-      const items = await service.listAll();
+      const items = await service.list(req.user);
       res.status(200).json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });

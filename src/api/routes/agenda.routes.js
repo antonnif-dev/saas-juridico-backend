@@ -60,6 +60,7 @@ const updateAgendaSchema = z.object({
 });
 
 // Protege todas as rotas de agenda
+router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), agendaController.list);
 router.use(authMiddleware(['administrador', 'advogado']));
 
 router.post('/', validate(createAgendaSchema), agendaController.create);

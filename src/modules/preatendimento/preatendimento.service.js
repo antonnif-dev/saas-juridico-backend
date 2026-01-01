@@ -9,6 +9,13 @@ class PreAtendimentoService {
     return await repository.findAll();
   }
 
+  async list(user) {
+    if (user.role === 'cliente') {
+      return await repository.findAllByClientId(user.uid);
+    }
+    return await repository.findAll();
+  }
+
   async accept(id) {
     return await repository.updateStatus(id, 'Em Negociacao');
   }

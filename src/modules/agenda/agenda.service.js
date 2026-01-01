@@ -130,7 +130,12 @@ class AgendaService {
     return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
   }
 
-  async listItemsForUser(userId) {
+  async listItemsForUser(user) {
+    if (user.role === 'cliente') {
+      return [];
+    }
+
+    const userId = user.uid || user;
     const items = await agendaRepository.findAllByUser(userId);
     return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
   }

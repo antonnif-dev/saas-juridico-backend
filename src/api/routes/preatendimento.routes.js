@@ -4,6 +4,9 @@ const controller = require('../controllers/preatendimento.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const multer = require('multer');
 const upload = multer();
+const preatendimentoController = require('../controllers/preatendimento.controller'); 
+
+router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoController.list);
 
 // Rota Pública (para o formulário na Landing Page)
 router.post('/', controller.create);
