@@ -12,7 +12,6 @@ router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), preate
 router.post('/', controller.create);
 
 // Rotas Protegidas (Apenas Admin/Advogado)
-router.get('/', authMiddleware(['administrador', 'advogado']), controller.list);
 router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);
 // Rotas de Fluxo de Trabalho
 router.put('/:id/status', authMiddleware(['administrador', 'advogado']), controller.updateStatus);

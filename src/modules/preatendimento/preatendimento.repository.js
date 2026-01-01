@@ -1,10 +1,6 @@
 const { db, auth } = require('../../config/firebase.config');
 const { FieldValue } = require('firebase-admin/firestore');
 
-const collection = db.collection('preatendimentos');
-const clientsCollection = db.collection('clients');
-const processosCollection = db.collection('processo');
-
 class PreAtendimentoRepository {
   get collection() {
     return db.collection('preatendimentos');
@@ -14,7 +10,7 @@ class PreAtendimentoRepository {
   get processosCollection() { return db.collection('processo'); }
 
   async create(data) {
-    const docRef = await collection.add({
+    const docRef = await this.collection.add({
       ...data,
       status: 'Pendente',
       createdAt: new Date(),
@@ -24,7 +20,7 @@ class PreAtendimentoRepository {
   }
 
   async findAll() {
-    const snapshot = await collection.orderBy('createdAt', 'desc').get();
+    const snapshot = await this.collection.orderBy('createdAt', 'desc').get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
@@ -37,19 +33,19 @@ class PreAtendimentoRepository {
   }
 
   async updateStatus(id, status) {
-    await collection.doc(id).update({ status });
+    await this.collection.doc(id).update({ status });
   }
 
   async delete(id) {
-    await collection.doc(id).delete();
+    await this.collection.doc(id).delete();
   }
 
   async updateProposal(id, data) {
-    await collection.doc(id).update(data);
+    await this.collection.doc(id).update(data);
   }
 
   async addFile(id, fileData) {
-    await collection.doc(id).update({
+    await this.collection.doc(id).update({
       adminFiles: FieldValue.arrayUnion(fileData)
     });
     return fileData;
@@ -82,7 +78,7 @@ class PreAtendimentoRepository {
 
     const batch = db.batch();
 
-    const clientRef = clientsCollection.doc(uid);
+    const clientRef = this.clientsCollection.doc(uid);
     const clientData = {
       name: data.nome,
       email: data.email,
@@ -95,13 +91,14 @@ class PreAtendimentoRepository {
     };
     batch.set(clientRef, clientData, { merge: true });
 
-    const caseRef = processosCollection.doc();
+    const caseRef = this.processosCollection.doc();
     const processoData = {
       titulo: `Caso: ${data.categoria}`,
       descricao: data.resumoProblema,
       clientId: uid,
       responsavelUid: adminId,
-      status: 'Em andamento',
+      //status: 'Em andamento',
+      status: 'Em Elaboração',
       area: data.categoria,
       createdAt: FieldValue.serverTimestamp(),
       urgencia: data.urgencia,
@@ -112,7 +109,7 @@ class PreAtendimentoRepository {
     };
     batch.set(caseRef, processoData);
 
-    const preRef = collection.doc(id);
+    const preRef = this.collection.doc(id);
     batch.update(preRef, { status: 'Convertido', relatedProcessoId: caseRef.id });
 
     await batch.commit();
