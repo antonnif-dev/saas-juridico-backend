@@ -14,16 +14,13 @@ class CaseController {
   }
 
   async list(req, res) {
-    try {
-      console.log('--- 1. Entrou no Controller: list ---');
-      const cases = await processoService.getCasesForUser(req.user.uid);
-      console.log('--- 5. Saindo do Controller com sucesso ---');
-      res.status(200).json(cases);
-    } catch (error) {
-      console.error('!!! ERRO no Controller:', error);
-      res.status(500).json({ message: 'Erro ao listar processos.', error: error.message });
-    }
+  try {
+    const cases = await processoService.getCasesForUser(req.user); 
+    res.status(200).json(cases);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao listar processos.', error: error.message });
   }
+}
 
   async getById(req, res) {
     try {
