@@ -41,12 +41,11 @@ class ProcessoService {
    * @returns {Promise<Array>} Uma lista de processos.
    */
   async getCasesForUser(user) {
-    if (user.role === 'administrador' || user.role === 'advogado') {
-      return await processoRepository.findAllByOwner(user.uid);
-    } else if (user.role === 'cliente') {
+    if (user.role === 'cliente') {
       return await processoRepository.findAllByClientId(user.uid);
     }
-    return [];
+
+    return await processoRepository.findAllByOwner(user.uid);
   }
 
   async listItemsForUser(userId) {

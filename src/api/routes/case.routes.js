@@ -34,10 +34,19 @@ const updateMovimentacaoSchema = z.object({
   }),
 });
 
-router.use(authMiddleware());
-router.use(authMiddleware(['administrador', 'advogado']));
+// Rota de listagem: Aberta para todos autenticados (o Service filtrará os dados)
+router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), caseController.list);
+
+// Rota de criação: Apenas Staff
 router.post('/', authMiddleware(['administrador', 'advogado']), validate(createCaseSchema), caseController.create);
+
+// Rota de Detalhes: Aberta para todos (o Service validará se o processo pertence ao cliente)
 router.get('/:id', authMiddleware(['administrador', 'advogado', 'cliente']), caseController.getById);
+
+// Rota de Atualização e Delete: Apenas Staff
+router.put('/:id', authMiddleware(['administrador', 'advogado']), caseController.update);
+router.delete('/:id', authMiddleware(['administrador', 'advogado']), caseController.delete);
+
 router.get('/', caseController.list);
 router.get('/:id', caseController.getById);
 router.put('/:id', caseController.update);
