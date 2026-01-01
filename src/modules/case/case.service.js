@@ -40,6 +40,22 @@ class ProcessoService {
    * @param {string} userId - O ID do usuário autenticado.
    * @returns {Promise<Array>} Uma lista de processos.
    */
+
+  async getCaseById(processoId, user) {
+    const processoDoc = await processoRepository.findById(processoId);
+    if (!processoDoc) throw new Error('Processo não encontrado.');
+
+    if (user.role === 'administrador' || user.role === 'advogado') {
+      return processoDoc;
+    }
+
+    if (user.role === 'cliente' && processoDoc.clientId === user.uid) {
+      return processoDoc;
+    }
+
+    throw new Error('Acesso não permitido a este processo.');
+  }
+
   async getCasesForUser(user) {
     if (user.role === 'administrador') {
       return await processoRepository.findAll();
