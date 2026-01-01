@@ -6,11 +6,19 @@ const clientsCollection = db.collection('clients');
 const processosCollection = db.collection('processo');
 
 class PreAtendimentoRepository {
+  get collection() {
+    return db.collection('preatendimentos');
+  }
+
+  get clientsCollection() { return db.collection('clients'); }
+  get processosCollection() { return db.collection('processo'); }
+
   async create(data) {
     const docRef = await collection.add({
       ...data,
       status: 'Pendente',
-      createdAt: new Date()
+      createdAt: new Date(),
+      clientId: data.clientId || null
     });
     return { id: docRef.id, ...data };
   }
@@ -21,7 +29,10 @@ class PreAtendimentoRepository {
   }
 
   async findAllByClientId(clientId) {
-    const snapshot = await collection.where('clientId', '==', clientId).orderBy('createdAt', 'desc').get();
+    const snapshot = await this.collection
+      .where('clientId', '==', clientId)
+      .orderBy('createdAt', 'desc')
+      .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
@@ -33,12 +44,10 @@ class PreAtendimentoRepository {
     await collection.doc(id).delete();
   }
 
-  // Método para salvar a proposta ou anotações
   async updateProposal(id, data) {
     await collection.doc(id).update(data);
   }
 
-  // Método para adicionar arquivo (upload)
   async addFile(id, fileData) {
     await collection.doc(id).update({
       adminFiles: FieldValue.arrayUnion(fileData)
@@ -46,14 +55,11 @@ class PreAtendimentoRepository {
     return fileData;
   }
 
-  // Método de Conversão
   async convertToCase(id, data, adminId) {
-    let uid = data.clientId; // ID vindo do frontend (vínculo manual ou cliente logado)
+    let uid = data.clientId;
     let tempPassword = null;
 
-    // 1. Lógica de Identificação de Usuário
     if (!uid) {
-      // Se não temos UID, tentamos criar ou buscar por e-mail
       try {
         tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
         const userRecord = await auth.createUser({
@@ -67,7 +73,6 @@ class PreAtendimentoRepository {
         if (error.code === 'auth/email-already-exists') {
           const existingUser = await auth.getUserByEmail(data.email);
           uid = existingUser.uid;
-          // IMPORTANTE: Não resetamos a senha aqui para não deslogar um cliente ativo
           tempPassword = "Utilize sua senha já cadastrada.";
         } else {
           throw error;
@@ -77,7 +82,6 @@ class PreAtendimentoRepository {
 
     const batch = db.batch();
 
-    // 2. Cliente (Usa merge: true para não sobrescrever dados antigos do cliente)
     const clientRef = clientsCollection.doc(uid);
     const clientData = {
       name: data.nome,
@@ -86,12 +90,11 @@ class PreAtendimentoRepository {
       phone: data.telefone,
       address: data.endereco,
       status: 'ativo',
-      updatedAt: FieldValue.serverTimestamp(), // Mudamos para updatedAt se já existir
-      convertedFrom: FieldValue.arrayUnion(id) // Registra que este pré-atendimento gerou um caso
+      updatedAt: FieldValue.serverTimestamp(),
+      convertedFrom: FieldValue.arrayUnion(id)
     };
     batch.set(clientRef, clientData, { merge: true });
 
-    // 3. Processo (Mantém sua lógica, mas garante o clientId correto)
     const caseRef = processosCollection.doc();
     const processoData = {
       titulo: `Caso: ${data.categoria}`,
@@ -109,7 +112,6 @@ class PreAtendimentoRepository {
     };
     batch.set(caseRef, processoData);
 
-    // 4. Atualiza status do Pré-Atendimento
     const preRef = collection.doc(id);
     batch.update(preRef, { status: 'Convertido', relatedProcessoId: caseRef.id });
 
@@ -117,7 +119,7 @@ class PreAtendimentoRepository {
 
     return {
       success: true,
-      tempPassword: tempPassword, // Retornará null ou o aviso se for cliente antigo
+      tempPassword: tempPassword,
       clientId: uid,
       processoId: caseRef.id
     };

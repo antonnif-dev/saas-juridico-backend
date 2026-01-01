@@ -1,4 +1,5 @@
 const repository = require('./preatendimento.repository');
+const cloudinary = require('../../config/cloudinary.config');
 
 class PreAtendimentoService {
   async create(data) {
@@ -20,12 +21,12 @@ class PreAtendimentoService {
     return await repository.updateStatus(id, 'Em Negociacao');
   }
 
-  async reject(id) {
+  async delete(id) {
     return await repository.delete(id);
   }
 
-  async convert(id, data) {
-    return await repository.convertToCase(id, data);
+  async reject(id) {
+    return await repository.delete(id);
   }
 
   async convert(id, data, adminId) {
@@ -53,7 +54,6 @@ class PreAtendimentoService {
   }
 
   async uploadFile(id, file) {
-    const cloudinary = require('../../config/cloudinary.config');
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: `preatendimentos/${id}`, resource_type: 'auto' },

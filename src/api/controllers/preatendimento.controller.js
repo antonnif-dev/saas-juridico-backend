@@ -23,16 +23,11 @@ class PreAtendimentoController {
     try {
       const { id } = req.params;
       const { status } = req.body;
-
-      if (status === 'aceitar') {
-        await service.accept(id);
-      }
+      if (status === 'aceitar') await service.accept(id);
       res.status(200).json({ message: 'Status atualizado.' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
+    } catch (error) { res.status(500).json({ error: error.message }); }
   }
-  
+
   async convert(req, res) {
     try {
       const { id } = req.params;
