@@ -1,5 +1,6 @@
 //const { auth, db } = require('../../config/firebase.config');
 const { auth } = require('../../config/firebase.config');
+const { db } = require('../../config/firebase.config');
 const userRepository = require('./user.repository');
 
 class UserService {
@@ -123,14 +124,39 @@ class UserService {
 
   /**
    * LISTAGEM DE ADVOGADOS (Utiliza Claims para precisão)
-   */
+   
   async listAdvogados() {
-    // Podemos listar via Auth para garantir quem tem a Claim, 
-    // ou via Firestore Repository. Aqui mantemos a precisão do Auth:
     const listUsersResult = await auth.listUsers(1000);
     return listUsersResult.users
       .filter(user => user.customClaims && user.customClaims.role === 'advogado')
       .map(u => ({ uid: u.uid, email: u.email, name: u.displayName }));
+  }
+  */
+
+  async listAdvogados() {
+    try {
+      const snapshot = await db.collection('users')
+        .where('role', 'in', ['advogado', 'administrador'])
+        .get();
+
+      if (snapshot.empty) {
+        return [];
+      }
+
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          uid: doc.id,
+          id: doc.id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          photoUrl: data.photoUrl || data.photoURL || null
+        };
+      });
+    } catch (error) {
+      throw new Error('Erro ao buscar lista de advogados: ' + error.message);
+    }
   }
 
   /**

@@ -65,5 +65,7 @@ router.delete('/advogados/:id', authMiddleware(['administrador']), userControlle
 router.patch('/role/:uid', authMiddleware(['administrador']), validate(updateRoleSchema), userController.updateRole);
 // Rota genérica de lista (opcional, se você usar para listar todos os usuários)
 router.get('/', authMiddleware(['administrador']), userController.list || ((req, res) => res.sendStatus(200)));
+// Mensagens dos clientes
+router.get('/advogados', authMiddleware(['administrador', 'advogado', 'cliente']), userController.listAdvogados);
 
 module.exports = router;
