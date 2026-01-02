@@ -1,4 +1,4 @@
-const { auth } = require('../../config/firebase.config');
+const { auth, db } = require('../../config/firebase.config');
 const clientRepository = require('./client.repository');
 
 class ClientService {
@@ -23,16 +23,35 @@ class ClientService {
 
     const newClientDocument = await clientRepository.create(clientDataForFirestore);
 
-    await auth.setCustomUserClaims(userRecord.uid, { 
-      role: 'cliente', 
-      clientId: newClientDocument.id 
+    await auth.setCustomUserClaims(userRecord.uid, {
+      role: 'cliente',
+      clientId: newClientDocument.id
     });
 
     return newClientDocument;
   }
 
   async getAllClients() {
-    return await clientRepository.findAll();
+    const clients = await clientRepository.findAll();
+
+    const enrichedClients = await Promise.all(clients.map(async (client) => {
+      if (!client.authUid) return client;
+
+      try {
+        const userDoc = await db.collection('users').doc(client.authUid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          return {
+            ...client,
+            photoUrl: userData.photoUrl || userData.photoURL || null
+          };
+        }
+      } catch (error) {
+      }
+      return client;
+    }));
+
+    return enrichedClients;
   }
 
   async getClientById(clientId) {
