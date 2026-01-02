@@ -1,5 +1,5 @@
 const messageRepository = require('./message.repository');
-const { auth } = require('../../config/firebase.config');
+const { auth, db } = require('../../config/firebase.config');
 const userRepository = require('../user/user.repository');
 
 class MessageService {
@@ -61,7 +61,7 @@ class MessageService {
             // Prioriza o nome do banco de dados (Firestore), depois displayName do Auth
             name: userData.name || userRecord.displayName || userRecord.email.split('@')[0],
             // Prioriza a foto do Cloudinary (photoUrl), depois a do Auth
-            photoURL: userData.photoUrl || userRecord.photoURL || null
+            photoURL: userData.photoUrl || userData.photoURL || userRecord.photoURL || null
           }
         };
       } catch (e) {

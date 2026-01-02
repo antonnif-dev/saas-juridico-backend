@@ -162,7 +162,7 @@ class UserService {
             return reject(error);
           }
           try {
-            await auth.updateUser(userId, { photoURL: result.secure_url });
+            await auth.updateUser(userId, { photoUrl: result.secure_url });
             await userRepository.update(userId, { photoUrl: result.secure_url });
             resolve({ photoUrl: result.secure_url });
           } catch (syncError) {
