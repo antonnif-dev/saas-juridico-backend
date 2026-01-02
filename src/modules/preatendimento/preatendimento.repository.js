@@ -27,7 +27,7 @@ class PreAtendimentoRepository {
   async findAllByClientId(clientId) {
     const snapshot = await this.collection
       .where('clientId', '==', clientId)
-      .orderBy('createdAt', 'desc')
+      //.orderBy('createdAt', 'desc')
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
