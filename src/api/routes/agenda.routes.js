@@ -59,14 +59,11 @@ const updateAgendaSchema = z.object({
   })
 });
 
-// Protege todas as rotas de agenda
 router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), agendaController.list);
+router.get('/:id', authMiddleware(['administrador', 'advogado', 'cliente']), agendaController.getById);
 router.use(authMiddleware(['administrador', 'advogado']));
 
 router.post('/', validate(createAgendaSchema), agendaController.create);
-router.get('/', agendaController.list);
-router.get('/:id', agendaController.getById);
-// A rota de atualização agora usa o novo schema
 router.put('/:id', validate(updateAgendaSchema), agendaController.update);
 router.delete('/:id', agendaController.delete);
 
