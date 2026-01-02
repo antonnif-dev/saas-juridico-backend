@@ -29,7 +29,13 @@ class PreAtendimentoRepository {
       .where('clientId', '==', clientId)
       //.orderBy('createdAt', 'desc')
       .get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return docs.sort((a, b) => {
+      const dateA = a.createdAt?._seconds ? a.createdAt._seconds : new Date(a.createdAt).getTime() / 1000;
+      const dateB = b.createdAt?._seconds ? b.createdAt._seconds : new Date(b.createdAt).getTime() / 1000;
+      return dateB - dateA;
+    });
   }
 
   async updateStatus(id, status) {
