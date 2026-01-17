@@ -50,7 +50,7 @@ class AgendaController {
   async getById(req, res) {
     try {
       const { id } = req.params;
-      const item = await agendaService.getItemById(id, req.user.uid);
+      const item = await agendaService.getItemById(id, req.user);
       res.status(200).json(item);
     } catch (error) {
       res.status(404).json({ message: error.message });

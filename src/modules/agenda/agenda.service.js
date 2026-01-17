@@ -140,13 +140,35 @@ class AgendaService {
     return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
   }
 
-  async getItemById(itemId, userId) {
+  async getItemById(itemId, user) {
+    const userId = user?.uid || user;
     const item = await agendaRepository.findById(itemId);
-    // Trava de segurança
     if (!item || item.responsavelUid !== userId) {
       throw new Error('Compromisso não encontrado ou acesso não permitido.');
     }
     return item;
+  }
+
+  async deleteItem(itemId, user) {
+    const userId = user?.uid || user;
+
+    const item = await agendaRepository.findById(itemId);
+    if (!item || item.responsavelUid !== userId) {
+      throw new Error('Compromisso não encontrado ou acesso não permitido.');
+    }
+
+    // cancela notificação agendada se existir
+    if (item.qstashMessageId) {
+      try {
+        await qstashClient.messages.delete(item.qstashMessageId);
+        console.log(`Notificação (${item.qstashMessageId}) cancelada antes de excluir.`);
+      } catch (error) {
+        console.error('Erro ao cancelar notificação antes de excluir:', error.message);
+      }
+    }
+
+    await agendaRepository.delete(itemId);
+    return true;
   }
 }
 module.exports = new AgendaService();
