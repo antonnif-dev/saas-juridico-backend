@@ -5,7 +5,6 @@ const { Client } = require("@upstash/qstash");
 
 const processoService = require('../case/case.service');
 
-// Inicializa o cliente do QStash com seu token do .env
 const qstashClient = new Client({
   token: process.env.QSTASH_TOKEN,
 });
@@ -20,10 +19,8 @@ class AgendaService {
       createdAt: new Date(),
     };
 
-    // 1. Cria o compromisso no seu banco de dados
     const newItem = await agendaRepository.create(dataToSave);
 
-    // --- GATILHO AUTOMÁTICO DE STATUS (AUDIÊNCIA) ---
     if (itemData.tipo === 'Audiência' && itemData.processoId) {
       try {
         console.log(`Gatilho ativado: Atualizando processo ${itemData.processoId} para 'Aguardando Audiência'`);
@@ -33,18 +30,14 @@ class AgendaService {
       }
     }
 
-    // --- AGENDAMENTO DE NOTIFICAÇÃO (UPSTASH QSTASH) ---
     try {
       const dataDoCompromisso = new Date(itemData.dataHora);
-      // Define a data da notificação (ex: 1 minuto antes)
       const tempoNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000);
       const agora = new Date().getTime();
 
-      // Verificamos se a data da notificação ainda não passou
       if (tempoNotificacao > agora) {
         console.log(`Agendando notificação para o compromisso: ${newItem.id}`);
 
-        // Priorizamos BACKEND_URL, mas mantemos WEBHOOK_URL como fallback se houver
         const targetUrl = process.env.BACKEND_URL
           ? `${process.env.BACKEND_URL}/api/notifications/process-agenda`
           : process.env.WEBHOOK_URL;
@@ -59,18 +52,15 @@ class AgendaService {
             compromissoId: newItem.id,
             userId: userId,
           },
-          // Converte para timestamp em segundos (exigido pelo QStash)
           notBefore: Math.floor(tempoNotificacao / 1000),
         });
 
-        // Salva o ID da mensagem no compromisso para futura referência ou cancelamento
         await agendaRepository.update(newItem.id, { qstashMessageId: messageId });
         console.log(`Notificação agendada com sucesso! Message ID: ${messageId}`);
       } else {
         console.warn("A data do compromisso é muito próxima ou já passou. Notificação não agendada.");
       }
     } catch (error) {
-      // Aqui usamos newItem.id para evitar o ReferenceError anterior
       console.error(`!!! FALHA AO AGENDAR NOTIFICAÇÃO NO UPSTASH para o item ${newItem.id}:`, error.message);
     }
 
@@ -83,9 +73,7 @@ class AgendaService {
       throw new Error('Compromisso não encontrado ou acesso não permitido.');
     }
 
-    // Se a data do compromisso for alterada, precisamos reagendar a notificação
     if (dataToUpdate.dataHora) {
-      // Cancela a notificação antiga, se existir
       if (item.qstashMessageId) {
         try {
           await qstashClient.messages.delete(item.qstashMessageId);
@@ -95,9 +83,8 @@ class AgendaService {
         }
       }
 
-      // Agenda a nova notificação
       const dataDoCompromisso = new Date(dataToUpdate.dataHora);
-      const dataDaNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000); // 1 minuto antes
+      const dataDaNotificacao = dataDoCompromisso.getTime() - (1 * 60 * 1000);
       const agora = new Date().getTime();
 
       if (dataDaNotificacao > agora) {
@@ -106,27 +93,18 @@ class AgendaService {
           body: { compromissoId: itemId, userId },
           notBefore: Math.floor(dataDaNotificacao / 1000),
         });
-        // Salva o ID da nova notificação
         dataToUpdate.qstashMessageId = messageId;
         console.log(`Nova notificação reagendada! Message ID: ${messageId}`);
       }
 
-      // Converte a string de data para Timestamp do Firestore
       dataToUpdate.dataHora = Timestamp.fromDate(new Date(dataToUpdate.dataHora));
     }
 
     return await agendaRepository.update(itemId, dataToUpdate);
   }
-  /*
-    async getItemsForUser(userId) {
-      return await agendaRepository.findByUser(userId);
-    }
-  }
-  */
 
   async getItemsForUser(userId) {
     const items = await agendaRepository.findByUser(userId);
-    // Ordena os resultados em JavaScript
     return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
   }
 
@@ -157,7 +135,6 @@ class AgendaService {
       throw new Error('Compromisso não encontrado ou acesso não permitido.');
     }
 
-    // cancela notificação agendada se existir
     if (item.qstashMessageId) {
       try {
         await qstashClient.messages.delete(item.qstashMessageId);

@@ -1,4 +1,5 @@
 const financialService = require('../../modules/financial/financial.service');
+const { uploadBufferToCloudinary } = require("../utils/cloudinaryUpload");
 
 class FinancialController {
   async list(req, res) {
@@ -89,6 +90,69 @@ class FinancialController {
     } catch (error) {
       console.error("Erro ao listar financeiro por processo:", error);
       res.status(500).json({ message: 'Erro ao buscar dados do processo.' });
+    }
+  }
+
+  async uploadRecibo(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'Arquivo de recibo é obrigatório.' });
+      }
+
+      const reciboUrl = req.file.path || req.file.url;
+
+      if (!reciboUrl) {
+        return res.status(500).json({ message: 'Não foi possível obter a URL do recibo.' });
+      }
+
+      const updateData = {
+        reciboUrl,
+        reciboNome: req.file.originalname || null,
+        reciboTipo: req.file.mimetype || null,
+        reciboUploadedAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updated = await financialService.updateStatus(id, updateData);
+      return res.status(200).json(updated);
+    } catch (error) {
+      console.error("Erro ao enviar recibo:", error);
+      return res.status(500).json({ message: 'Erro ao anexar recibo.' });
+    }
+  }
+
+  async uploadRecibo(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Arquivo de recibo é obrigatório." });
+      }
+
+      // Upload para Cloudinary
+      const result = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: "saas-juridico/recibos",
+        public_id: `recibo_${id}_${Date.now()}`,
+      });
+
+      const updateData = {
+        reciboUrl: result.secure_url,
+        reciboPublicId: result.public_id,
+        reciboNome: req.file.originalname || null,
+        reciboTipo: req.file.mimetype || null,
+        reciboUploadedAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Reaproveita seu updateStatus (ele já faz update no repo)
+      const updated = await financialService.updateStatus(id, updateData);
+
+      return res.status(200).json(updated);
+    } catch (error) {
+      console.error("Erro ao anexar recibo:", error);
+      return res.status(500).json({ message: "Erro ao anexar recibo.", error: error.message });
     }
   }
 }
