@@ -1,4 +1,5 @@
-const { auth, db } = require('../../config/firebase.config');
+// src/api/middlewares/auth.middleware.js
+const { auth } = require('../../config/firebase.config');
 
 const authMiddleware = (allowedRoles = []) => {
   return async (req, res, next) => {
@@ -13,33 +14,18 @@ const authMiddleware = (allowedRoles = []) => {
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
 
-      let userDocData = null;
-      try {
-        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-        userDocData = userDoc.exists ? (userDoc.data() || null) : null;
-      } catch (e) {
-        userDocData = null;
-      }
-
-      const resolvedRole = decodedToken.role || userDocData?.role || 'cliente';
-      const resolvedClientId =
-        userDocData?.clientId ||
-        userDocData?.clienteId ||
-        userDocData?.client?.id ||
-        (resolvedRole === 'cliente' ? decodedToken.uid : undefined);
+      const role = (decodedToken.role || 'cliente').toLowerCase();
 
       req.user = {
         uid: decodedToken.uid,
         email: decodedToken.email,
-        name: decodedToken.name || decodedToken.displayName || userDocData?.name,
-        role: resolvedRole,
-        isAdmin: resolvedRole === 'administrador',
-        clientId: resolvedClientId,
-        tenantId: userDocData?.tenantId || decodedToken.tenantId || decodedToken.tenant || undefined,
+        name: decodedToken.name || decodedToken.displayName,
+        role,
+        isAdmin: role === 'administrador',
+        clientId: role === 'cliente' ? decodedToken.uid : null,
       };
 
-      // Verificação de permissões
-      if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+      if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
         return res.status(403).send({ message: 'Acesso negado. Permissão insuficiente.' });
       }
 

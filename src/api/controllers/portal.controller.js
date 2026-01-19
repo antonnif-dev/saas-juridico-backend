@@ -1,7 +1,6 @@
 const clientService = require('../../modules/client/client.service');
 const processoService = require('../../modules/case/case.service');
 const { db } = require('../../config/firebase.config');
-//const userService = require('../services/user.service');
 
 class PortalController {
   async getDashboardSummary(req, res) {
@@ -23,11 +22,10 @@ class PortalController {
 
   async getMyCases(req, res) {
     try {
-      const clientId = req.user?.clientId;
-      if (!clientId) {
-        return res.status(400).json({ message: 'clientId não encontrado no token/usuário. Verifique o auth middleware.' });
-      }
+      // O clientId já está disponível em req.user graças ao nosso middleware
+      const clientId = req.user.clientId;
 
+      // Usamos a função de serviço que já criamos para buscar os processos
       const cases = await processoService.getCasesByClientId(clientId);
 
       res.status(200).json(cases);
@@ -63,6 +61,7 @@ class PortalController {
     try {
       const { id } = req.params;
 
+      // Reaproveita a regra de permissão/ownership do seu service
       const processo = await processoService.getCaseById(id, req.user);
 
       return res.status(200).json(processo);
@@ -72,7 +71,5 @@ class PortalController {
     }
   }
 }
-
-
 
 module.exports = new PortalController();
