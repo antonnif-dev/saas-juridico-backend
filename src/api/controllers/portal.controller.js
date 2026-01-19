@@ -1,6 +1,7 @@
 const clientService = require('../../modules/client/client.service');
 const processoService = require('../../modules/case/case.service');
 const { db } = require('../../config/firebase.config');
+//const userService = require('../services/user.service');
 
 class PortalController {
   async getDashboardSummary(req, res) {
@@ -61,7 +62,6 @@ class PortalController {
     try {
       const { id } = req.params;
 
-      // Reaproveita a regra de permissão/ownership do seu service
       const processo = await processoService.getCaseById(id, req.user);
 
       return res.status(200).json(processo);
@@ -71,5 +71,7 @@ class PortalController {
     }
   }
 }
+
+
 
 module.exports = new PortalController();
