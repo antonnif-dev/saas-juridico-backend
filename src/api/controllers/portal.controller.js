@@ -70,6 +70,101 @@ class PortalController {
       return res.status(statusCode).json({ message: error.message || 'Erro ao buscar detalhes do processo.' });
     }
   }
+
+  async listLawyers(req, res) {
+    try {
+      const snap = await db.collection("users").where("role", "==", "advogado").get();
+
+      const lawyers = snap.docs.map((doc) => {
+        const u = doc.data() || {};
+        return {
+          id: doc.id,
+          uid: u.uid || doc.id,
+          name: u.name || u.displayName || u.nome || "Advogado",
+          photoUrl: u.photoUrl || u.photoURL || u.avatarUrl || null,
+          oab: u.oab || null,
+        };
+      });
+
+      return res.status(200).json(lawyers);
+    } catch (error) {
+      console.error("Erro ao buscar advogados (portal):", error);
+      return res.status(500).json({ message: "Erro ao buscar advogados." });
+    }
+  }
+
+  async getMyPreAtendimentos(req, res) {
+    try {
+      const clientId = req.user?.clientId;
+      if (!clientId) return res.status(401).json({ message: 'Não autenticado.' });
+
+      const svc = getPreAtendimentoServiceSafely();
+      if (svc?.getByClientId) {
+        const items = await svc.getByClientId(clientId);
+        return res.status(200).json(items || []);
+      }
+
+      if (!db) {
+        return res.status(500).json({
+          message:
+            'DB não disponível. Verifique ../../config/firebase.config (export { db }).',
+        });
+      }
+
+      const snap = await db
+        .collection('preatendimentos')
+        .where('clientId', '==', clientId)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return res.status(200).json(items);
+    } catch (err) {
+      console.error('getMyPreAtendimentos error:', err);
+      return res.status(500).json({ message: 'Erro ao buscar atendimentos do cliente.' });
+    }
+  }
+
+  async getPreAtendimentoById(req, res) {
+    try {
+      const clientId = req.user?.clientId;
+      const { id } = req.params;
+      if (!clientId) return res.status(401).json({ message: 'Não autenticado.' });
+
+      const svc = getPreAtendimentoServiceSafely();
+      if (svc?.getById) {
+        const item = await svc.getById(id);
+        if (!item) return res.status(404).json({ message: 'Atendimento não encontrado.' });
+        if (item.clientId && item.clientId !== clientId) {
+          return res.status(403).json({ message: 'Acesso negado.' });
+        }
+        return res.status(200).json(item);
+      }
+
+      if (!db) {
+        return res.status(500).json({
+          message:
+            'DB não disponível. Verifique ../../config/firebase.config (export { db }).',
+        });
+      }
+
+      const ref = db.collection('preatendimentos').doc(id);
+      const doc = await ref.get();
+
+      if (!doc.exists) return res.status(404).json({ message: 'Atendimento não encontrado.' });
+
+      const data = { id: doc.id, ...doc.data() };
+      if (data.clientId && data.clientId !== clientId) {
+        return res.status(403).json({ message: 'Acesso negado.' });
+      }
+
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error('getPreAtendimentoById error:', err);
+      return res.status(500).json({ message: 'Erro ao buscar atendimento.' });
+    }
+  }
+
 }
 
 module.exports = new PortalController();

@@ -32,4 +32,16 @@ router.get(
   portalController.listLawyers
 );
 
+router.get(
+  '/meus-atendimentos',
+  authMiddleware(['cliente']),
+  portalController.getMyPreAtendimentos
+);
+
+router.get(
+  '/atendimentos/:id',
+  authMiddleware(['cliente']),
+  portalController.getPreAtendimentoById
+);
+
 module.exports = router;
