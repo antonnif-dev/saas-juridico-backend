@@ -16,5 +16,20 @@ router.get(
   authMiddleware(['cliente']), // A mesma segurança, só clientes podem acessar
   portalController.getMyCases
 );
+/*
+// GET /api/portal/processos/:id/detalhes
+router.get(
+  '/processos/:id/detalhes',
+  authMiddleware(['cliente']),
+  portalController.getMyCaseDetails
+);
+
+router.get(
+  "/advogados",
+  authMiddleware(["cliente"]),
+  portalController.listLawyers
+);
+*/
+router.get('/advogados', authMiddleware(['cliente']), /*portalController.getAdvogados*/);
 
 module.exports = router;
