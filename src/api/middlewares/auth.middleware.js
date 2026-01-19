@@ -1,4 +1,4 @@
-const { auth } = require('../../config/firebase.config');
+const { auth, db } = require('../../config/firebase.config');
 
 const authMiddleware = (allowedRoles = []) => {
   return async (req, res, next) => {
@@ -12,21 +12,31 @@ const authMiddleware = (allowedRoles = []) => {
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
-      console.log("=== DEBUG AUTH ===");
-      console.log("UID:", decodedToken.uid);
-      console.log("CLAIMS COMPLETAS:", decodedToken); // Veja se 'role' aparece aqui
-      console.log("ROLE ENCONTRADA:", decodedToken.role);
 
-      // Mapeamos as propriedades do Firebase para o padrão do seu sistema
+      let userDocData = null;
+      try {
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        userDocData = userDoc.exists ? (userDoc.data() || null) : null;
+      } catch (e) {
+        userDocData = null;
+      }
+
+      const resolvedRole = decodedToken.role || userDocData?.role || 'cliente';
+      const resolvedClientId =
+        userDocData?.clientId ||
+        userDocData?.clienteId ||
+        userDocData?.client?.id ||
+        (resolvedRole === 'cliente' ? decodedToken.uid : undefined);
+
       req.user = {
         uid: decodedToken.uid,
         email: decodedToken.email,
-        name: decodedToken.name || decodedToken.displayName,
-        role: decodedToken.role || 'cliente', // Fallback caso a claim não exista
-        isAdmin: decodedToken.role === 'administrador'
+        name: decodedToken.name || decodedToken.displayName || userDocData?.name,
+        role: resolvedRole,
+        isAdmin: resolvedRole === 'administrador',
+        clientId: resolvedClientId,
+        tenantId: userDocData?.tenantId || decodedToken.tenantId || decodedToken.tenant || undefined,
       };
-
-      const userRole = req.user.role;
 
       // Verificação de permissões
       if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {

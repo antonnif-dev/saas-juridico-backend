@@ -23,10 +23,11 @@ class PortalController {
 
   async getMyCases(req, res) {
     try {
-      // O clientId já está disponível em req.user graças ao nosso middleware
-      const clientId = req.user.clientId;
+      const clientId = req.user?.clientId;
+      if (!clientId) {
+        return res.status(400).json({ message: 'clientId não encontrado no token/usuário. Verifique o auth middleware.' });
+      }
 
-      // Usamos a função de serviço que já criamos para buscar os processos
       const cases = await processoService.getCasesByClientId(clientId);
 
       res.status(200).json(cases);
