@@ -14,17 +14,23 @@ class FinancialController {
         totalAtrasado: 0
       };
 
-      transactions.forEach(txn => {
-        const valor = txn.valor || 0;
-        const isDespesa = txn.tipo === 'despesa';
+      transactions.forEach((txn) => {
+        const valor = Number(txn.valor || 0);
+        const isDespesa = txn.tipo === "despesa";
+        const isCliente = user?.role === "cliente";
 
-        if (txn.status === 'pending') {
-          summary.totalPendente += valor;
-        } else if (txn.status === 'paid') {
-          // Se for despesa, subtrai do total pago para dar o saldo real de caixa
-          summary.totalPago += isDespesa ? -valor : valor;
-        } else if (txn.status === 'overdue') {
-          summary.totalAtrasado += valor;
+        if (txn.status === "pending") {
+          summary.totalPendente += isCliente && isDespesa ? 0 : valor;
+
+        } else if (txn.status === "paid") {
+          if (isCliente) {
+            summary.totalPago += isDespesa ? 0 : valor;
+          } else {
+            summary.totalPago += isDespesa ? -valor : valor;
+          }
+
+        } else if (txn.status === "overdue") {
+          summary.totalAtrasado += isCliente && isDespesa ? 0 : valor;
         }
       });
 
