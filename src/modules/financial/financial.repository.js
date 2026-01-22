@@ -32,14 +32,9 @@ class FinancialRepository {
   }
 
   async update(id, data) {
-    try {
-      const docRef = this.collection.doc(id);
-      await docRef.update(data);
-      return { id, ...data };
-    } catch (error) {
-      console.error("Erro no Repository ao atualizar:", error);
-      throw error;
-    }
+    const docRef = this.collection.doc(id);
+    await docRef.update(data);
+    return { id, ...data };
   }
 }
 
