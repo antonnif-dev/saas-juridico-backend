@@ -1,5 +1,7 @@
 # Ignorar credenciais do Firebase
 src/config/saas-juridico-firebase-adminsdk.json
+src/config/*adminsdk*.json
+src/config/*.json
 
 # Node modules
 node_modules/
