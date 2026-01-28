@@ -1,0 +1,63 @@
+* [33m7a3b182[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: criando 2 ambientes locais
+* [33m873ad52[m feat: multi-tenant funciona com processo
+* [33m464020b[m fix: novo ajuste no auth.middleware.js
+* [33mc237cc8[m mudancas em auth.middleware.js
+* [33m60ef026[m fix: tentativa 2 de multi-tenant
+* [33m63d6f93[m feat: teste de mudanca para multi-tenant
+* [33m80b7c72[m feat: nova pagina datajus
+* [33mf56fcc0[m fix: revertendo acoes em agenda.controller.js
+* [33md9b8dfb[m feat: notificacao para cliente
+* [33mde88d0e[m feat: card pago funcionando para clientes
+* [33m1905dba[m fix: tentativa 2 de pagamentos para clientes
+* [33m113b725[m feat: pagina pagamentos para cliente
+* [33mdc08a3d[m fix: pagina atendimentos para clientes
+* [33m239f4d4[m feat: refinando portal do cliente, pagina atendimentos
+* [33ma7ddf05[m ajuste em auth.middleware
+* [33m9a1205d[m feat: processos para clientes
+* [33m2e28b8a[m feat: mensagens do usuario cliente
+* [33mbfe054e[m feat: iniciando portal cliente
+* [33m5275f31[m fix: codigos em locais errados
+* [33mce7977d[m feat: prazo nos pagamentos e publicacao de recibo
+* [33me40d832[m feat: funcao delete na pagina agenda
+* [33mc9d3462[m feat: mensagens para clientes
+* [33m90ce670[m feat: foto em client.service.js
+* [33md5cb34e[m fix: nome e foto na pagina mensagens
+* [33m1779920[m fix: ultima tentativa notificacoes para clientes
+* [33m8955c7f[m fix: tentativa n de notificacao para cliente
+* [33m7002097[m fix: preatendimento.repository.js
+* [33m2d6fc48[m fix: notificacoes para clientes, tentativa
+* [33mb810487[m fix: preatendimento.service.js
+* [33m8981ea8[m fix: notificacoes para clientes
+* [33me2028ec[m feat: notificacoes para clientes
+* [33m948a548[m fix: detalhes do processo que falhava
+* [33m516024f[m fix: dashboard para cliente
+* [33ma884088[m feat: dashboard para cliente
+* [33mce26ef5[m feat: criando dashboard do cliente
+* [33mc9e0825[m feat: pre atendimento para usuarios existentes
+* [33md925689[m feat: relatorio final completo
+* [33ma8f6d7f[m fix: ainda ajustando foto e nome
+* [33m7d5ec2f[m fix: ajustando foto e nome do usuario na pagina mensagens
+* [33mf5f5177[m fix: implementando imagem em mensagens
+* [33mf0f5d91[m fix: funcao mensagem
+* [33m0077904[m fix: tentativa 3 de funcao pagamento
+* [33m430c458[m fix: atualizacao 2 de pagamento
+* [33me93b426[m fix: atualizacao na funcao pagamento
+* [33m9e03eb9[m fix: funcao transacao
+* [33m004f859[m feat: metodo de transacao
+* [33mdb2fc36[m fix: tentativa 2 ajustar meu perfil
+* [33m8dbeae3[m fix: pagina meu perfil para demais usuarios
+* [33m50a691b[m fix: polindo hierarquia de usuarios
+* [33md1664a0[m hierarquia de informacoes para os usuarios
+* [33m0bd1efb[m ajustes finais para apresentacao da plataforma
+* [33m382d1ac[m fix: debug com console.log para log do vercel
+* [33mac112c9[m fix: debug
+* [33md86e134[m fix: ajustando nomenclatura em case.controller
+* [33m69b68f0[m tentativa 4 de protocolar um processo
+* [33m0cd2393[m tentativa 3 de protocolar um processo
+* [33mc494d66[m fix: tentantiva 2 de protocolar um processo
+* [33mf60cd15[m update: protocolando um processo
+* [33m2f2f0a4[m exibindo status do processo
+* [33m8a3a578[m fix: preatendimento.repository
+* [33m2836ca9[m fix: alterando ultimos nomes antigos
+* [33md32d80d[m fix: alterar nomenclatura das classes
+* [33mca2b0cb[m fix: fluxo do processo - 1

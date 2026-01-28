@@ -58,7 +58,6 @@ app.use('/api/processo', authMiddleware(['administrador', 'advogado', 'cliente']
 app.use('/api/mensagens', authMiddleware(['administrador', 'advogado', 'cliente']), messageRoutes);
 app.use('/api/portal', authMiddleware(['administrador', 'advogado', 'cliente']), portalRoutes);
 app.use('/api/financial', authMiddleware(['administrador', 'advogado', 'cliente']), financialRoutes);
-app.use('/api/financial', financialRoutes);
 
 // --- 3. ROTAS DE STAFF (ACESSO: ADMIN E ADVOGADO) ---
 const staffOnly = authMiddleware(['administrador', 'advogado']);
