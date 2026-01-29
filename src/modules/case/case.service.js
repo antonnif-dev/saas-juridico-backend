@@ -183,7 +183,7 @@ class ProcessoService {
     if (!file) throw new Error('Nenhum arquivo enviado.');
 
     // Valida permissão antes de iniciar o stream para o Cloudinary
-    await this._validateWritePermission(processoId, user);
+    await this._validateDocumentUploadPermission(processoId, user);
 
     return new Promise((resolve, reject) => {
       const uploadOptions = {
@@ -225,6 +225,21 @@ class ProcessoService {
   // O controller chama 'listItemsForUser' (mantém o nome), mas ele chama o seu getCasesForUser
   async listItemsForUser(userId) {
     return this.getCasesForUser(userId);
+  }
+
+  async _validateDocumentUploadPermission(processoId, user) {
+    const processo = await processoRepository.findById(processoId);
+    if (!processo) throw new Error('Processo não encontrado.');
+
+    if (user.role === 'administrador') return processo;
+
+    const isResponsavel = processo.responsavelUid === user.uid;
+    if (user.role === 'advogado' && isResponsavel) return processo;
+
+    const isClientOwner = processo.clientId === user.uid;
+    if (user.role === 'cliente' && isClientOwner) return processo;
+
+    throw new Error('Permissão insuficiente para anexar documentos neste processo.');
   }
 }
 

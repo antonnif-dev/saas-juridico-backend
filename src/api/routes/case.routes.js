@@ -54,11 +54,6 @@ router.delete('/:id', caseController.delete);
 router.post('/', caseController.create);
 
 router.post(
-  '/:id/documentos',
-  upload.single('documento'),
-  caseController.uploadDocument
-);
-router.post(
   '/:processoId/movimentacoes',
   authMiddleware(['administrador', 'advogado']),
   validate(addMovimentacaoSchema),
@@ -85,7 +80,7 @@ router.delete(
 
 router.post(
   '/:id/documentos',
-  authMiddleware(['administrador', 'advogado']),
+  authMiddleware(['administrador', 'advogado', 'cliente']),
   upload.single('documento'),
   caseController.uploadDocument
 );
