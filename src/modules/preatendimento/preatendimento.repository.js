@@ -27,7 +27,6 @@ class PreAtendimentoRepository {
   async findAllByClientId(clientId) {
     const snapshot = await this.collection
       .where('clientId', '==', clientId)
-      //.orderBy('createdAt', 'desc')
       .get();
 
     const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -103,7 +102,6 @@ class PreAtendimentoRepository {
       descricao: data.resumoProblema,
       clientId: uid,
       responsavelUid: adminId,
-      //status: 'Em andamento',
       status: 'Em Elaboração',
       area: data.categoria,
       createdAt: FieldValue.serverTimestamp(),
@@ -126,6 +124,23 @@ class PreAtendimentoRepository {
       clientId: uid,
       processoId: caseRef.id
     };
+  }
+
+  async getMovimentacoes(id) {
+    const snap = await this.collection
+      .doc(id)
+      .collection('movimentacoes')
+      .orderBy('data', 'desc')
+      .get();
+
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async addMovimentacao(id, data) {
+    return await this.collection
+      .doc(id)
+      .collection('movimentacoes')
+      .add(data);
   }
 }
 

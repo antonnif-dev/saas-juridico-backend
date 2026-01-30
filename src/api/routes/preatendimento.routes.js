@@ -4,7 +4,7 @@ const controller = require('../controllers/preatendimento.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const multer = require('multer');
 const upload = multer();
-const preatendimentoController = require('../controllers/preatendimento.controller'); 
+const preatendimentoController = require('../controllers/preatendimento.controller');
 
 router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoController.list);
 
@@ -18,6 +18,23 @@ router.put('/:id/status', authMiddleware(['administrador', 'advogado']), control
 router.put('/:id/proposal', authMiddleware(['administrador', 'advogado']), controller.updateProposal);
 router.post('/:id/converter', authMiddleware(['administrador', 'advogado']), controller.convert);
 router.post('/:id/accept', authMiddleware(['administrador', 'advogado']), controller.accept);
-router.post('/:id/upload', authMiddleware(['administrador', 'advogado']), upload.single('documento'), controller.upload);
+router.post('/:id/upload',
+  authMiddleware(['administrador', 'advogado', 'cliente']),
+  upload.single('documento'),
+  controller.upload
+);
+
+// Movimentações do pré-atendimento
+router.get(
+  '/:id/movimentacoes',
+  authMiddleware(['administrador', 'advogado', 'cliente']),
+  controller.getMovimentacoes
+);
+
+router.post(
+  '/:id/movimentacoes',
+  authMiddleware(['administrador', 'advogado', 'cliente']),
+  controller.addMovimentacao
+);
 
 module.exports = router;

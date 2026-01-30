@@ -63,6 +63,17 @@ class PreAtendimentoService {
       uploadStream.end(file.buffer);
     });
   }
+
+  async getMovimentacoes(id) {
+    return await repository.getMovimentacoes(id);
+  }
+
+  async addMovimentacao(id, data) {
+    return await repository.addMovimentacao(id, {
+      ...data,
+      data: new Date(),
+    });
+  }
 }
 
 module.exports = new PreAtendimentoService();

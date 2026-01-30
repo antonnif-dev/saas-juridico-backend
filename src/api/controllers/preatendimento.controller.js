@@ -95,6 +95,33 @@ class PreAtendimentoController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async getMovimentacoes(req, res) {
+    try {
+      const { id } = req.params;
+      const items = await service.getMovimentacoes(id, req.user);
+      res.status(200).json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async addMovimentacao(req, res) {
+    try {
+      const { id } = req.params;
+      const { descricao, origem } = req.body;
+
+      await service.addMovimentacao(id, {
+        descricao,
+        origem,
+        criadoPor: req.user.uid,
+      });
+
+      res.status(201).json({ message: 'Movimentação adicionada.' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new PreAtendimentoController();
