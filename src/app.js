@@ -64,7 +64,8 @@ const staffOnly = authMiddleware(['administrador', 'advogado']);
 
 app.use('/api/clients', staffOnly, clientRoutes);
 app.use('/api/agenda', staffOnly, agendaRoutes);
-app.use('/api/preatendimento', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoRoutes);
+//app.use('/api/preatendimento', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoRoutes);
+app.use('/api/preatendimento', preatendimentoRoutes);
 app.use('/api/notifications', authMiddleware(['administrador', 'advogado', 'cliente']), notificationRoutes);
 app.use('/api/dashboard', staffOnly, dashboardRoutes);
 app.use('/api/ai', staffOnly, aiRoutes);
