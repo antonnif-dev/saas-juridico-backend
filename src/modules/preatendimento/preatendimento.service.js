@@ -1,9 +1,40 @@
 const repository = require('./preatendimento.repository');
 const cloudinary = require('../../config/cloudinary.config');
+const clientService = require('../client/client.service');
 
 class PreAtendimentoService {
-  async create(data) {
-    return await repository.create(data);
+  async create(data, user = null) {
+    const { nome, email, telefone, cpfCnpj, mensagem, clientId: clientIdFromBody } = data;
+
+    let clientId = clientIdFromBody;
+
+    if (!clientId) {
+      if (!email) {
+        throw new Error('Email é obrigatório para criar pré-atendimento público.');
+      }
+
+      const client = await clientService.findByEmail(email);
+
+      if (!client) {
+        const newClient = await clientService.create({ nome, email, telefone, cpfCnpj });
+        clientId = newClient.uid;
+      } else {
+        clientId = client.uid;
+      }
+    }
+    // return preAtendimentoRepository.create({
+    return repository.create({
+      nome,
+      email,
+      telefone,
+      cpfCnpj,
+      mensagem,
+      clientId,
+      createdByUid: user?.uid || null,
+      origem: user ? 'interno' : 'publico',
+      status: 'pendente',
+      createdAt: new Date()
+    });
   }
 
   async listAll() {
@@ -75,5 +106,4 @@ class PreAtendimentoService {
     });
   }
 }
-
 module.exports = new PreAtendimentoService();

@@ -9,15 +9,37 @@ class PreAtendimentoRepository {
   get clientsCollection() { return db.collection('clients'); }
   get processosCollection() { return db.collection('processo'); }
 
-  async create(data) {
-    const docRef = await this.collection.add({
-      ...data,
-      status: 'Pendente',
-      createdAt: new Date(),
-      clientId: data.clientId || null
-    });
-    return { id: docRef.id, ...data };
+  async create(data, user = null) {
+  let clientId = null;
+
+  if (user?.role === 'cliente') {
+    clientId = user.uid;
+  } else if (user?.role === 'administrador' || user?.role === 'advogado') {
+    if (data.clientId) {
+      const clientSnap = await this.clientsCollection.doc(data.clientId).get();
+      if (!clientSnap.exists) {
+        throw new Error('clientId inválido: cliente não encontrado em /clients');
+      }
+      clientId = data.clientId;
+    }
+  } else {
+    clientId = null;
   }
+
+  const payload = {
+    ...data,
+    clientId,
+    status: 'Pendente',
+    createdAt: new Date(),
+  };
+
+  if (!user && 'clientId' in payload) {
+    payload.clientId = null;
+  }
+
+  const docRef = await this.collection.add(payload);
+  return { id: docRef.id, ...payload };
+}
 
   async findAll() {
     const snapshot = await this.collection.orderBy('createdAt', 'desc').get();

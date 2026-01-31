@@ -3,7 +3,7 @@ const service = require('../../modules/preatendimento/preatendimento.service');
 class PreAtendimentoController {
   async create(req, res) {
     try {
-      await service.create(req.body);
+      await service.create(req.body, req.user || null);
       res.status(201).json({ message: 'Pré-atendimento enviado.' });
     } catch (error) {
       res.status(500).json({ error: error.message });

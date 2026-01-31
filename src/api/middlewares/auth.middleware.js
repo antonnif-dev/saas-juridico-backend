@@ -37,4 +37,38 @@ const authMiddleware = (allowedRoles = []) => {
   };
 };
 
+const optionalAuthMiddleware = () => {
+  return async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    // Se não tem token, segue como público
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+
+    try {
+      const decodedToken = await auth.verifyIdToken(idToken);
+
+      const role = (decodedToken.role || 'cliente').toLowerCase();
+
+      req.user = {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        name: decodedToken.name || decodedToken.displayName,
+        role,
+        isAdmin: role === 'administrador',
+        clientId: role === 'cliente' ? decodedToken.uid : null,
+      };
+
+      return next();
+    } catch (error) {
+      console.error('!!! ERRO no Optional Auth Middleware:', error);
+      return res.status(403).send({ message: 'Token inválido ou expirado.' });
+    }
+  };
+};
+
 module.exports = authMiddleware;
+module.exports.optional = optionalAuthMiddleware;
