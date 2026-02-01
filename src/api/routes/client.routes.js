@@ -1,4 +1,3 @@
-// 1. Imports necessários
 const express = require('express');
 const { z } = require('zod');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -16,20 +15,18 @@ const createClientSchema = z.object({
     type: z.enum(['PF', 'PJ'], { errorMap: () => ({ message: 'O tipo deve ser PF ou PJ.' }) })
   })
 });
-
+router.get('/me', authMiddleware(), clientController.me);
+router.put('/me', authMiddleware(['cliente']), clientController.updateMe);
 router.post('/',
   authMiddleware(['administrador', 'advogado']),
   validate(createClientSchema),
   clientController.create
 );
 
-router.get('/',
-  authMiddleware(), // Apenas verifica se o usuário está logado, sem exigir um perfil específico
-  clientController.listAll
-);
-router.get('/me', authMiddleware(), clientController.me);
+router.get('/', authMiddleware(), clientController.listAll);
+
 router.get('/:id', authMiddleware(), clientController.getById);
-router.put('/:id', authMiddleware(['administrador', 'advogado']), clientController.update);
+router.put('/:id', authMiddleware(['administrador', 'advogado']), clientController.updateMe);
 router.delete('/:id', authMiddleware(['administrador']), clientController.delete);
 
 router.get('/me',

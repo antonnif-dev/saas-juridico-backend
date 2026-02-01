@@ -72,17 +72,27 @@ class ClientController {
     }
   }
 
-  async update(req, res) {
+  async updateMe(req, res) {
     try {
-      const { id } = req.params;
-      const updatedClient = await clientService.updateClient(id, req.body);
-      res.status(200).json(updatedClient);
+      const uid = req.user?.uid;
+      if (!uid) return res.status(401).json({ message: 'Não autenticado.' });
+
+      const updated = await clientService.updateClientByAuthUid(uid, req.body);
+
+      if (req.user.role !== 'cliente') {
+        return res.status(403).json({ message: 'Acesso negado. Permissão insuficiente.' });
+      }
+      
+      return res.status(200).json(updated);
     } catch (error) {
-      res.status(404).json({ message: error.message });
+      console.error('!!! ERRO AO ATUALIZAR /clients/me:', error);
+      return res.status(500).json({ message: 'Erro interno ao atualizar perfil do cliente.' });
     }
   }
 
   async delete(req, res) {
+    router.put('/:id', authMiddleware(['administrador', 'advogado']), ClientController.update);
+
     try {
       const { id } = req.params;
       await clientService.deleteClient(id);

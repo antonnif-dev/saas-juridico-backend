@@ -74,6 +74,35 @@ class ClientService {
     return await clientRepository.update(clientId, dataToUpdate);
   }
 
+  async updateClientByAuthUid(authUid, dataToUpdate) {
+    const clean = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) return obj.map(clean);
+      return Object.fromEntries(
+        Object.entries(obj)
+          .filter(([_, v]) => v !== undefined)
+          .map(([k, v]) => [k, clean(v)])
+      );
+    };
+
+    const client = await clientRepository.findByAuthUid(authUid);
+    if (!client) throw new Error('Cliente não encontrado.');
+
+    const payload = clean({
+      ...dataToUpdate,
+      updatedAt: new Date(),
+    });
+
+    if (payload.address && !payload.endereco) {
+      payload.endereco = payload.address;
+      delete payload.address;
+    }
+
+    delete payload.authUid;
+
+    return await clientRepository.update(client.id, payload);
+  }
+
   async deleteClient(clientId) {
     return await clientRepository.delete(clientId);
   }
