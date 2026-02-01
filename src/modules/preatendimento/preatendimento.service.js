@@ -15,11 +15,10 @@ class PreAtendimentoService {
 
       const client = await clientService.findByEmail(email);
 
-      if (!client) {
-        const newClient = await clientService.create({ nome, email, telefone, cpfCnpj });
-        clientId = newClient.uid;
+      if (client?.authUid) {
+        clientId = client.authUid; // 🔥 padronizado
       } else {
-        clientId = client.uid;
+        clientId = null; // novo usuário continua possível depois (na conversão)
       }
     }
     // return preAtendimentoRepository.create({

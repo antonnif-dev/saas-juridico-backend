@@ -23,6 +23,13 @@ class ClientRepository {
     return { id: doc.id, ...doc.data() };
   }
 
+  async findByEmail(email) {
+    const snapshot = await clientsCollection.where('email', '==', email).limit(1).get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    return { id: doc.id, ...doc.data() };
+  }
+
   async update(clientId, dataToUpdate) {
     await clientsCollection.doc(clientId).update(dataToUpdate);
     return { id: clientId, ...dataToUpdate };

@@ -10,36 +10,37 @@ class PreAtendimentoRepository {
   get processosCollection() { return db.collection('processo'); }
 
   async create(data, user = null) {
-  let clientId = null;
+    let clientId = null;
 
-  if (user?.role === 'cliente') {
-    clientId = user.uid;
-  } else if (user?.role === 'administrador' || user?.role === 'advogado') {
-    if (data.clientId) {
-      const clientSnap = await this.clientsCollection.doc(data.clientId).get();
-      if (!clientSnap.exists) {
-        throw new Error('clientId inválido: cliente não encontrado em /clients');
+    if (user?.role === 'cliente') {
+      clientId = user.uid;
+    } else if (user?.role === 'administrador' || user?.role === 'advogado') {
+      if (data.clientId) {
+        const snap = await this.clientsCollection
+          .where('authUid', '==', data.clientId)
+          .limit(1)
+          .get();
+
+        if (snap.empty) {
+          throw new Error('clientId inválido: nenhum cliente com este authUid em /clients');
+        }
+
+        clientId = data.clientId;
       }
-      clientId = data.clientId;
+    } else {
+      clientId = data.clientId || null;
     }
-  } else {
-    clientId = null;
+
+    const payload = {
+      ...data,
+      clientId,
+      status: 'Pendente',
+      createdAt: new Date(),
+    };
+
+    const docRef = await this.collection.add(payload);
+    return { id: docRef.id, ...payload };
   }
-
-  const payload = {
-    ...data,
-    clientId,
-    status: 'Pendente',
-    createdAt: new Date(),
-  };
-
-  if (!user && 'clientId' in payload) {
-    payload.clientId = null;
-  }
-
-  const docRef = await this.collection.add(payload);
-  return { id: docRef.id, ...payload };
-}
 
   async findAll() {
     const snapshot = await this.collection.orderBy('createdAt', 'desc').get();

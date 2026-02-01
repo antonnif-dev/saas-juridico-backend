@@ -62,6 +62,10 @@ class ClientService {
     return client;
   }
 
+  async findByEmail(email) {
+    return await clientRepository.findByEmail(email);
+  }
+
   async updateClient(clientId, dataToUpdate) {
     return await clientRepository.update(clientId, dataToUpdate);
   }
