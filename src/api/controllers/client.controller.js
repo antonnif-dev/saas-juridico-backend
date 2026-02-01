@@ -34,6 +34,27 @@ class ClientController {
     }
   }
 
+  async getMe(req, res) {
+    try {
+      const client = await clientService.getClientByAuthUid(req.user.uid);
+      if (!client) return res.status(404).json({ message: 'Cliente não encontrado.' });
+      res.status(200).json(client);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao buscar perfil.', error: error.message });
+    }
+  }
+
+  async getByAuthUid(req, res) {
+    try {
+      const { authUid } = req.params;
+      const client = await clientService.getClientByAuthUid(authUid);
+      if (!client) return res.status(404).json({ message: 'Cliente não encontrado.' });
+      res.status(200).json(client);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao buscar cliente.', error: error.message });
+    }
+  }
+
   async update(req, res) {
     try {
       const { id } = req.params;

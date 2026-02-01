@@ -6,8 +6,7 @@ class PreAtendimentoService {
   async create(data, user = null) {
     const { nome, email, telefone, cpfCnpj, mensagem, clientId: clientIdFromBody } = data;
 
-    let clientId = clientIdFromBody;
-
+    let clientId = clientIdFromBody || null;
     if (!clientId) {
       if (!email) {
         throw new Error('Email é obrigatório para criar pré-atendimento público.');
@@ -16,12 +15,12 @@ class PreAtendimentoService {
       const client = await clientService.findByEmail(email);
 
       if (client?.authUid) {
-        clientId = client.authUid; // 🔥 padronizado
+        clientId = client.authUid;
       } else {
-        clientId = null; // novo usuário continua possível depois (na conversão)
+        clientId = null;
       }
     }
-    // return preAtendimentoRepository.create({
+
     return repository.create({
       nome,
       email,
@@ -33,7 +32,7 @@ class PreAtendimentoService {
       origem: user ? 'interno' : 'publico',
       status: 'pendente',
       createdAt: new Date()
-    });
+    }, user);
   }
 
   async listAll() {

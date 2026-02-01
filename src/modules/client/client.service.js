@@ -62,6 +62,10 @@ class ClientService {
     return client;
   }
 
+  async getClientByAuthUid(authUid) {
+    return await clientRepository.findByAuthUid(authUid);
+  }
+
   async findByEmail(email) {
     return await clientRepository.findByEmail(email);
   }
