@@ -9,8 +9,7 @@ const preatendimentoController = require('../controllers/preatendimento.controll
 router.get('/', authMiddleware(['administrador', 'advogado', 'cliente']), preatendimentoController.list);
 
 // Rota Pública (para o formulário na Landing Page)
-router.post('/', controller.create);
-//router.post('/interno', authRequiredMiddleware, controller.create);
+router.post('/', authMiddleware.optional(), controller.create);
 
 // Rotas Protegidas (Apenas Admin/Advogado)
 router.delete('/:id', authMiddleware(['administrador', 'advogado']), controller.delete);

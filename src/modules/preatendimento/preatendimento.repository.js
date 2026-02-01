@@ -38,6 +38,10 @@ class PreAtendimentoRepository {
       createdAt: new Date(),
     };
 
+    Object.keys(payload).forEach((k) => {
+      if (payload[k] === undefined) delete payload[k];
+    });
+
     const docRef = await this.collection.add(payload);
     return { id: docRef.id, ...payload };
   }

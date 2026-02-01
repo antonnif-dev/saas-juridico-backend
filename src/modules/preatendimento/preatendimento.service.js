@@ -4,35 +4,74 @@ const clientService = require('../client/client.service');
 
 class PreAtendimentoService {
   async create(data, user = null) {
-    const { nome, email, telefone, cpfCnpj, mensagem, clientId: clientIdFromBody } = data;
+    let clientId = data?.clientId || null;
 
-    let clientId = clientIdFromBody || null;
-    if (!clientId) {
-      if (!email) {
-        throw new Error('Email é obrigatório para criar pré-atendimento público.');
-      }
-
-      const client = await clientService.findByEmail(email);
-
-      if (client?.authUid) {
-        clientId = client.authUid;
-      } else {
-        clientId = null;
-      }
+    if (user?.role === 'cliente') {
+      clientId = user.uid;
     }
 
-    return repository.create({
-      nome,
-      email,
-      telefone,
-      cpfCnpj,
-      mensagem,
-      clientId,
+    if (!clientId && data?.email) {
+      const client = await clientService.findByEmail(data.email);
+      if (client?.authUid) clientId = client.authUid;
+    }
+
+    const payload = {
+      nome: data?.nome ?? '',
+      cpfCnpj: data?.cpfCnpj ?? '',
+      tipoPessoa: data?.tipoPessoa ?? 'Física',
+      dataNascimento: data?.dataNascimento ?? '',
+      estadoCivil: data?.estadoCivil ?? '',
+      email: data?.email ?? '',
+      telefone: data?.telefone ?? '',
+      profissao: data?.profissao ?? '',
+      nomeMae: data?.nomeMae ?? '',
+
+      endereco: {
+        cep: data?.endereco?.cep ?? '',
+        rua: data?.endereco?.rua ?? '',
+        numero: data?.endereco?.numero ?? '',
+        complemento: data?.endereco?.complemento ?? '',
+        bairro: data?.endereco?.bairro ?? '',
+        cidade: data?.endereco?.cidade ?? '',
+        estado: data?.endereco?.estado ?? '',
+      },
+
+      categoria: data?.categoria ?? '',
+      resumoProblema: data?.resumoProblema ?? '',
+      dataProblema: data?.dataProblema ?? '',
+      problemaContinuo: !!data?.problemaContinuo,
+      parteContrariaNome: data?.parteContrariaNome ?? '',
+      tipoRelacao: data?.tipoRelacao ?? '',
+      documentos: Array.isArray(data?.documentos) ? data.documentos : [],
+      objetivo: data?.objetivo ?? '',
+      urgencia: data?.urgencia ?? 'Média',
+      triagem: (data?.triagem && typeof data.triagem === 'object') ? data.triagem : {},
+      informacaoExtra: data?.informacaoExtra ?? '',
+
+      mensagem: (typeof data?.mensagem === 'string') ? data.mensagem : '',
+
+      consentimentoLGPD: !!data?.consentimentoLGPD,
+      consentimentoWhatsapp: !!data?.consentimentoWhatsapp,
+      consentimentoCadastro: !!data?.consentimentoCadastro,
+
+      clientId: clientId || null,
       createdByUid: user?.uid || null,
       origem: user ? 'interno' : 'publico',
-      status: 'pendente',
-      createdAt: new Date()
-    }, user);
+      status: 'Pendente',
+      createdAt: new Date(),
+    };
+
+    const stripUndefined = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      Object.keys(obj).forEach((k) => {
+        if (obj[k] === undefined) delete obj[k];
+        else if (typeof obj[k] === 'object' && obj[k] !== null) stripUndefined(obj[k]);
+      });
+      return obj;
+    };
+
+    stripUndefined(payload);
+    return await repository.create(payload, user);
   }
 
   async listAll() {
