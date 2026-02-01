@@ -55,6 +55,23 @@ class ClientController {
     }
   }
 
+  async me(req, res) {
+    try {
+      const uid = req.user?.uid;
+      if (!uid) {
+        return res.status(401).json({ message: 'Não autenticado.' });
+      }
+      const client = await clientService.getClientByAuthUid(uid);
+      if (!client) {
+        return res.status(404).json({ message: 'Cliente não encontrado.' });
+      }
+      return res.status(200).json(client);
+    } catch (error) {
+      console.error('!!! ERRO AO BUSCAR /clients/me:', error);
+      return res.status(500).json({ message: 'Erro interno ao buscar perfil do cliente.' });
+    }
+  }
+
   async update(req, res) {
     try {
       const { id } = req.params;

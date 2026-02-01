@@ -27,6 +27,7 @@ router.get('/',
   authMiddleware(), // Apenas verifica se o usuário está logado, sem exigir um perfil específico
   clientController.listAll
 );
+router.get('/me', authMiddleware(), clientController.me);
 router.get('/:id', authMiddleware(), clientController.getById);
 router.put('/:id', authMiddleware(['administrador', 'advogado']), clientController.update);
 router.delete('/:id', authMiddleware(['administrador']), clientController.delete);
