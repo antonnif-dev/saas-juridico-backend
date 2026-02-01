@@ -3,9 +3,13 @@ const service = require('../../modules/preatendimento/preatendimento.service');
 class PreAtendimentoController {
   async create(req, res) {
     try {
+      console.log("➡️ [preatendimento.create] user:", req.user || null);
+      console.log("➡️ [preatendimento.create] body:", req.body);
       await service.create(req.body, req.user || null);
       res.status(201).json({ message: 'Pré-atendimento enviado.' });
     } catch (error) {
+      console.error("❌ [preatendimento.create] erro:", error);
+      console.error("❌ [preatendimento.create] stack:", error.stack);
       res.status(500).json({ error: error.message });
     }
   }
