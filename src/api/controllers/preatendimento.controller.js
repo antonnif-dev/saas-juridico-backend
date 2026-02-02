@@ -1,6 +1,10 @@
 const service = require('../../modules/preatendimento/preatendimento.service');
+const { db } = require('../../config/firebase.config');
 
 class PreAtendimentoController {
+  col() {
+    return db.collection('preatendimento');
+  }
   async create(req, res) {
     try {
       console.log("➡️ [preatendimento.create] user:", req.user || null);
@@ -43,6 +47,23 @@ class PreAtendimentoController {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getById(id) {
+    const doc = await this.col().doc(id).get();
+    if (!doc.exists) return null;
+    return { id: doc.id, ...doc.data() };
+  }
+
+  async update(req, res) {
+    try {
+      const { id } = req.params;
+      const updated = await service.update(id, req.body, req.user);
+      return res.status(200).json(updated);
+    } catch (error) {
+      console.error("❌ [preatendimento.update] erro:", error);
+      return res.status(500).json({ error: error.message });
     }
   }
 

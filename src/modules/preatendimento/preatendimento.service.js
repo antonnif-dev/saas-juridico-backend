@@ -142,5 +142,64 @@ class PreAtendimentoService {
       data: new Date(),
     });
   }
+
+  async update(id, data, user) {
+    if (!user || (user.role !== 'administrador' && user.role !== 'advogado')) {
+      throw new Error('Acesso negado.');
+    }
+
+    const patch = {
+      nome: data?.nome ?? '',
+      cpfCnpj: data?.cpfCnpj ?? '',
+      tipoPessoa: data?.tipoPessoa ?? 'Física',
+      dataNascimento: data?.dataNascimento ?? '',
+      estadoCivil: data?.estadoCivil ?? '',
+      email: data?.email ?? '',
+      telefone: data?.telefone ?? '',
+      profissao: data?.profissao ?? '',
+      nomeMae: data?.nomeMae ?? '',
+
+      endereco: {
+        cep: data?.endereco?.cep ?? '',
+        rua: data?.endereco?.rua ?? '',
+        numero: data?.endereco?.numero ?? '',
+        complemento: data?.endereco?.complemento ?? '',
+        bairro: data?.endereco?.bairro ?? '',
+        cidade: data?.endereco?.cidade ?? '',
+        estado: data?.endereco?.estado ?? '',
+      },
+
+      // caso
+      categoria: data?.categoria ?? '',
+      resumoProblema: data?.resumoProblema ?? '',
+      dataProblema: data?.dataProblema ?? '',
+      problemaContinuo: !!data?.problemaContinuo,
+      parteContrariaNome: data?.parteContrariaNome ?? '',
+      tipoRelacao: data?.tipoRelacao ?? '',
+      documentos: Array.isArray(data?.documentos) ? data.documentos : [],
+      objetivo: data?.objetivo ?? '',
+      urgencia: data?.urgencia ?? 'Média',
+      triagem: (data?.triagem && typeof data.triagem === 'object') ? data.triagem : {},
+      informacaoExtra: data?.informacaoExtra ?? '',
+
+      proposalValue: data?.proposalValue ?? null,
+      proposalStatus: data?.proposalStatus ?? '',
+      adminNotes: data?.adminNotes ?? '',
+
+      updatedAt: new Date(),
+    };
+
+    const stripUndefined = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      Object.keys(obj).forEach((k) => {
+        if (obj[k] === undefined) delete obj[k];
+        else if (typeof obj[k] === 'object' && obj[k] !== null) stripUndefined(obj[k]);
+      });
+      return obj;
+    };
+    stripUndefined(patch);
+
+    return await repository.update(id, patch);
+  }
 }
 module.exports = new PreAtendimentoService();

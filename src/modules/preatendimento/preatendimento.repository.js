@@ -76,6 +76,37 @@ class PreAtendimentoRepository {
     await this.collection.doc(id).update(data);
   }
 
+  async update(id, payload, user) {
+    const forbidden = [
+      'createdAt',
+      'createdByUid',
+      'origem',
+      'clientId',
+      'status',
+      'relatedProcessoId',
+    ];
+
+    forbidden.forEach((k) => {
+      if (k in payload) delete payload[k];
+    });
+
+    if (payload?.endereco && typeof payload.endereco !== 'object') delete payload.endereco;
+    if (payload?.triagem && typeof payload.triagem !== 'object') delete payload.triagem;
+    if (payload?.documentos && !Array.isArray(payload.documentos)) delete payload.documentos;
+
+    await this.collection.doc(id).update({
+      ...payload,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedByUid: user?.uid || null,
+    });
+
+    // Retorna o doc atualizado
+    const snap = await this.collection.doc(id).get();
+    if (!snap.exists) throw new Error('Pré-atendimento não encontrado.');
+    return { id: snap.id, ...snap.data() };
+  }
+
+
   async addFile(id, fileData) {
     await this.collection.doc(id).update({
       adminFiles: FieldValue.arrayUnion(fileData)

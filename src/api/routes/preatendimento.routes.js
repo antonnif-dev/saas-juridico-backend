@@ -31,10 +31,18 @@ router.get(
   controller.getMovimentacoes
 );
 
+router.put(
+  '/:id',
+  authMiddleware(['administrador', 'advogado']),
+  controller.update
+);
+
+
 router.post(
   '/:id/movimentacoes',
   authMiddleware(['administrador', 'advogado', 'cliente']),
   controller.addMovimentacao
 );
+
 
 module.exports = router;
