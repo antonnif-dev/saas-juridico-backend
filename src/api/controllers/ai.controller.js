@@ -1,41 +1,66 @@
+const preatendimentoService = require('../../modules/preatendimento/preatendimento.service');
+const aiPreService = require('../../modules/ai/ai.pre.service');
+
 class AiController {
-  
-  // Gera análise para Pré-Atendimento (Triagem)
+
   async analyzeTriagem(req, res) {
-    // Aqui no futuro conectaremos com OpenAI
-    const mockResponse = {
-      triagem: "O caso apresenta alta probabilidade de êxito...",
-      resumo: "Cliente relata vínculo sem registro...",
-      documentos: ["CTPS", "Extratos", "Conversas WhatsApp"],
-      parecer: "Recomenda-se ajuizamento imediato."
-    };
-    // Simula delay de processamento
-    setTimeout(() => res.json(mockResponse), 1500);
-  }
+    try {
+      const leadId = req.body?.leadId || req.body?.preatendimentoId;
+      const persist = !!req.body?.persist;
 
-  // Gera peças para Atendimento
-  async generateDraft(req, res) {
-    const { type } = req.body; // 'peticao', 'contestacao', 'recurso'
-    const mockResponse = {
-      titulo: `Minuta de ${type || 'Peça Jurídica'}`,
-      conteudo: "EXCELENTÍSSIMO SENHOR DOUTOR JUIZ...\n\n[Conteúdo gerado pela IA baseado nos fatos do processo...]",
-      status: "Draft gerado com sucesso"
-    };
-    setTimeout(() => res.json(mockResponse), 2000);
-  }
+      if (!leadId || typeof leadId !== 'string') {
+        return res.status(400).json({ error: 'leadId (ou preatendimentoId) é obrigatório.' });
+      }
 
-  // Gera Relatório Final e NPS
-  async generateReport(req, res) {
-    const { processoId, type } = req.body;
-    let response = {};
+      const result = await aiPreService.triagem({ leadId, persist, user: req.user || null });
 
-    if (type === 'pdf') {
-      response = { url: 'https://exemplo.com/relatorio-final.pdf', message: 'PDF Gerado' };
-    } else if (type === 'email') {
-      response = { message: 'E-mail de encerramento enviado ao cliente.' };
+      if (!result) {
+        return res.status(404).json({ error: 'Pré-atendimento não encontrado.' });
+      }
+
+      return res.json(result);
+    } catch (err) {
+      console.error('Erro em analyzeTriagem:', err);
+      return res.status(500).json({ error: 'Erro ao gerar triagem.' });
     }
+  }
 
-    setTimeout(() => res.json(response), 1500);
+  async generateDraft(req, res) {
+    try {
+      const leadId = req.body?.leadId || req.body?.preatendimentoId;
+      const type = req.body?.type;
+
+      if (!leadId || typeof leadId !== 'string') {
+        return res.status(400).json({ error: 'leadId (ou preatendimentoId) é obrigatório.' });
+      }
+
+      const result = await aiPreService.draft({ leadId, type });
+      if (!result) return res.status(404).json({ error: 'Pré-atendimento não encontrado.' });
+
+      return res.json(result);
+    } catch (err) {
+      console.error('Erro em generateDraft:', err);
+      return res.status(500).json({ error: 'Erro ao gerar draft.' });
+    }
+  }
+
+  async generateReport(req, res) {
+    try {
+      const leadId = req.body?.leadId || req.body?.preatendimentoId;
+      const type = req.body?.type;
+
+      if (!leadId || typeof leadId !== 'string') {
+        return res.status(400).json({ error: 'leadId (ou preatendimentoId) é obrigatório.' });
+      }
+
+      const result = await aiPreService.report({ leadId, type });
+      if (!result) return res.status(404).json({ error: 'Pré-atendimento não encontrado.' });
+
+      return res.json(result);
+    } catch (err) {
+      console.error('Erro em generateReport:', err);
+      return res.status(500).json({ error: 'Erro ao gerar relatório.' });
+    }
   }
 }
 

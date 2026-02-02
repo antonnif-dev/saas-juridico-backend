@@ -51,6 +51,28 @@ class PreAtendimentoRepository {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async findById(id) {
+    const doc = await this.collection.doc(id).get();
+    if (!doc.exists) return null;
+
+    const data = doc.data();
+
+    const normalizeDate = (v) => {
+      if (!v) return null;
+      if (v._seconds) return new Date(v._seconds * 1000);
+      if (typeof v.toDate === 'function') return v.toDate();
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: normalizeDate(data.createdAt),
+      updatedAt: normalizeDate(data.updatedAt),
+    };
+  }
+
   async findAllByClientId(clientId) {
     const snapshot = await this.collection
       .where('clientId', '==', clientId)

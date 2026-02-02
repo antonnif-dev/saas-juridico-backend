@@ -85,6 +85,11 @@ class PreAtendimentoService {
     return await repository.findAll();
   }
 
+  async getById(id) {
+    if (!id) throw new Error('ID do pré-atendimento é obrigatório.');
+    return await repository.findById(id);
+  }
+
   async accept(id) {
     return await repository.updateStatus(id, 'Em Negociacao');
   }
