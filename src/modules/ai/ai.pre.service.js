@@ -2,7 +2,7 @@
 const preatendimentoService = require('../preatendimento/preatendimento.service');
 const preatendimentoRepository = require('../preatendimento/preatendimento.repository');
 
-function safeText(v, max = 5000) {
+function safeText(v, max = 8000) {
   if (typeof v !== 'string') return '';
   const t = v.trim();
   return t.length > max ? t.slice(0, max) : t;
@@ -19,73 +19,189 @@ function normalizeDocs(list) {
     .filter(Boolean);
 }
 
-function pickResumo(pre) {
+function pickRawNarrative(pre) {
   return (
-    safeText(pre?.resumoProblema, 1200) ||
-    safeText(pre?.mensagem, 1200) ||
-    safeText(pre?.informacaoExtra, 1200) ||
-    'Sem descrição informada.'
+    safeText(pre?.resumoProblema, 4000) ||
+    safeText(pre?.mensagem, 4000) ||
+    safeText(pre?.informacaoExtra, 4000) ||
+    ''
   );
 }
 
-function buildTriagem(pre) {
-  const categoria = safeText(pre?.categoria, 120);
-  const urgencia = safeText(pre?.urgencia, 40) || 'Média';
-  const objetivo = safeText(pre?.objetivo, 300);
-  const tipoRelacao = safeText(pre?.tipoRelacao, 120);
-  const dataProblema = safeText(pre?.dataProblema, 60);
-  const problemaContinuo = !!pre?.problemaContinuo;
-
-  const pontos = [];
-  if (!categoria) pontos.push('Categoria não informada.');
-  if (!objetivo) pontos.push('Objetivo do cliente não informado.');
-  if (!tipoRelacao) pontos.push('Tipo de relação não informado.');
-  if (!dataProblema) pontos.push('Data do fato não informada (atenção a prazos).');
-  if (problemaContinuo) pontos.push('Indicação de problema contínuo.');
-
-  const pri =
-    urgencia.toLowerCase().includes('alta') ? 'Alta' :
-    urgencia.toLowerCase().includes('baixa') ? 'Baixa' :
-    'Média';
-
-  const header = `Categoria: ${categoria || 'Não informado'} | Urgência: ${urgencia} | Prioridade sugerida: ${pri}.`;
-
-  if (!pontos.length) {
-    return `${header}\nInformações mínimas parecem suficientes para avançar para coleta documental e definição de estratégia.`;
-  }
-
-  return `${header}\nPontos a confirmar:\n- ${pontos.join('\n- ')}`;
+function toTitle(s) {
+  const t = safeText(s, 140);
+  if (!t) return '';
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-function suggestDocs(pre) {
-  const categoria = safeText(pre?.categoria, 120).toLowerCase();
-  const docs = new Set();
+function guessArea(pre) {
+  const cat = safeText(pre?.categoria, 120).toLowerCase();
+  const text = (safeText(pre?.resumoProblema, 2000) + ' ' + safeText(pre?.mensagem, 2000)).toLowerCase();
 
-  if (categoria.includes('trabalh')) {
-    ['CTPS', 'Holerites', 'Extrato FGTS', 'Comprovantes de ponto', 'Conversas/Emails'].forEach(d => docs.add(d));
-  } else if (categoria.includes('fam')) {
-    ['Certidões (nascimento/casamento)', 'Comprovante de residência', 'Provas (mensagens/fotos)', 'Documentos das partes'].forEach(d => docs.add(d));
-  } else if (categoria.includes('consum')) {
-    ['Contrato/Comprovante de compra', 'Nota fiscal', 'Protocolos de atendimento', 'Prints/Conversas'].forEach(d => docs.add(d));
-  } else if (categoria.includes('civel') || categoria.includes('civil')) {
-    ['Contratos', 'Comprovantes de pagamento', 'Notificações', 'Conversas/Emails'].forEach(d => docs.add(d));
+  // heurística simples (melhor que nada)
+  if (cat.includes('trabalh') || text.includes('fgts') || text.includes('ctps') || text.includes('demissão')) return 'Trabalhista';
+  if (cat.includes('fam') || text.includes('guarda') || text.includes('pensão') || text.includes('divórc')) return 'Família';
+  if (cat.includes('consum') || text.includes('produto') || text.includes('defeito') || text.includes('reembolso') || text.includes('cobrança indevida')) return 'Consumidor';
+  if (cat.includes('civel') || cat.includes('civil') || text.includes('contrato') || text.includes('inadimpl')) return 'Cível/Contratos';
+  return toTitle(pre?.categoria) || 'A confirmar';
+}
+
+function guessUrgency(pre) {
+  const u = safeText(pre?.urgencia, 30).toLowerCase();
+  if (u.includes('alta')) return { level: 'Alta', why: 'Usuário marcou urgência alta.' };
+  if (u.includes('baixa')) return { level: 'Baixa', why: 'Usuário marcou urgência baixa.' };
+
+  // heurística por palavras-chave
+  const t = (safeText(pre?.resumoProblema, 2000) + ' ' + safeText(pre?.mensagem, 2000)).toLowerCase();
+  if (t.includes('liminar') || t.includes('ameaça') || t.includes('bloqueio') || t.includes('despejo') || t.includes('prisão') || t.includes('medida protetiva')) {
+    return { level: 'Alta', why: 'Texto contém indícios de urgência (liminar/risco imediato).' };
+  }
+  return { level: 'Média', why: 'Sem indício forte de urgência além do padrão.' };
+}
+
+function buildStructuredResumo(pre) {
+  const area = guessArea(pre);
+  const objetivo = safeText(pre?.objetivo, 500);
+  const tipoRelacao = safeText(pre?.tipoRelacao, 200);
+  const parteContraria = safeText(pre?.parteContrariaNome, 200);
+  const dataProblema = safeText(pre?.dataProblema, 80);
+  const continuo = pre?.problemaContinuo ? 'Sim' : 'Não';
+  const narrativa = pickRawNarrative(pre);
+
+  const docsEnviados = normalizeDocs(pre?.documentos);
+
+  const linhas = [];
+  linhas.push(`**Área provável:** ${area}`);
+  if (tipoRelacao) linhas.push(`**Relação:** ${tipoRelacao}`);
+  if (parteContraria) linhas.push(`**Parte contrária:** ${parteContraria}`);
+  if (dataProblema) linhas.push(`**Quando começou:** ${dataProblema}`);
+  linhas.push(`**Problema contínuo:** ${continuo}`);
+  if (objetivo) linhas.push(`**Objetivo do cliente:** ${objetivo}`);
+  linhas.push('');
+  linhas.push('**Fatos (texto base):**');
+  linhas.push(narrativa ? narrativa : '[Sem narrativa registrada]');
+  linhas.push('');
+  linhas.push(`**Documentos enviados:** ${docsEnviados.length ? docsEnviados.join(', ') : 'Nenhum'}`);
+
+  // lacunas: perguntas
+  const lacunas = [];
+  if (!dataProblema) lacunas.push('Qual a data aproximada do fato/início?');
+  if (!objetivo) lacunas.push('O que exatamente o cliente quer obter (pedido final)?');
+  if (!tipoRelacao) lacunas.push('Qual a relação entre as partes (contrato, emprego, consumo, família etc.)?');
+  if (!parteContraria) lacunas.push('Quem é a parte contrária (nome/empresa/CPF-CNPJ se possível)?');
+  if (!docsEnviados.length) lacunas.push('Quais documentos/provas existem (contrato, comprovantes, prints)?');
+
+  linhas.push('');
+  linhas.push('**Lacunas / Perguntas essenciais:**');
+  linhas.push(lacunas.length ? `- ${lacunas.join('\n- ')}` : '- Sem lacunas críticas detectadas.');
+
+  return linhas.join('\n');
+}
+
+function suggestDocuments(pre) {
+  const area = guessArea(pre).toLowerCase();
+  const docsEnviados = new Set(normalizeDocs(pre?.documentos).map(d => d.toLowerCase()));
+
+  const packs = [];
+
+  // cada item: { item, prioridade, motivo }
+  const add = (item, prioridade, motivo) => {
+    if (!item) return;
+    if (docsEnviados.has(item.toLowerCase())) return;
+    packs.push({ item, prioridade, motivo });
+  };
+
+  // gerais
+  add('Documento de identidade (RG/CNH)', 'essencial', 'Identificação do cliente');
+  add('CPF', 'essencial', 'Identificação do cliente');
+  add('Comprovante de residência', 'recomendado', 'Competência/qualificação');
+
+  if (area.includes('trabalh')) {
+    add('CTPS', 'essencial', 'Vínculo e histórico');
+    add('Holerites', 'essencial', 'Prova de remuneração');
+    add('Extrato FGTS', 'recomendado', 'Verificar depósitos');
+    add('Cartões de ponto / controle de jornada', 'recomendado', 'Horas extras');
+    add('Conversas/Emails/Comunicados', 'recomendado', 'Prova de fatos');
+  } else if (area.includes('fam')) {
+    add('Certidões (nascimento/casamento)', 'essencial', 'Vínculo familiar');
+    add('Provas (mensagens/fotos)', 'recomendado', 'Contexto e fatos');
+    add('Comprovantes de renda', 'recomendado', 'Pensão/alimentos');
+  } else if (area.includes('consum')) {
+    add('Nota fiscal / comprovante de compra', 'essencial', 'Relação de consumo');
+    add('Contrato/termos de serviço', 'recomendado', 'Cláusulas e obrigações');
+    add('Protocolos de atendimento', 'recomendado', 'Tentativas de solução');
+    add('Prints/Conversas', 'recomendado', 'Prova de contato');
+    add('Faturas/Boletos', 'recomendado', 'Cobranças');
+  } else if (area.includes('cível') || area.includes('civil') || area.includes('contrat')) {
+    add('Contrato', 'essencial', 'Base da obrigação');
+    add('Comprovantes de pagamento', 'essencial', 'Adimplemento/inadimplemento');
+    add('Notificações (se houver)', 'recomendado', 'Constituição em mora');
+    add('Conversas/Emails', 'recomendado', 'Negociação e fatos');
   } else {
-    ['Documentos pessoais', 'Comprovantes relacionados ao fato', 'Conversas/Emails/Prints', 'Contratos (se houver)'].forEach(d => docs.add(d));
+    add('Contrato (se existir)', 'recomendado', 'Base da relação');
+    add('Comprovantes do fato (prints, fotos, recibos)', 'recomendado', 'Provas iniciais');
   }
 
-  return Array.from(docs);
+  // entrega como string[] para sua UI (mas mantendo prioridade no texto)
+  const out = packs.map(p => `${p.prioridade.toUpperCase()}: ${p.item} — ${p.motivo}`);
+  return out.length ? out : ['Sem sugestões adicionais (dados insuficientes).'];
+}
+
+function buildTriagemText(pre) {
+  const area = guessArea(pre);
+  const urg = guessUrgency(pre);
+
+  const objetivo = safeText(pre?.objetivo, 500);
+  const dataProblema = safeText(pre?.dataProblema, 80);
+  const tipoRelacao = safeText(pre?.tipoRelacao, 200);
+
+  const riscos = [];
+  if (!dataProblema) riscos.push('Data do fato não informada (pode impactar prazos).');
+  if (!objetivo) riscos.push('Objetivo do cliente não definido (pode gerar desalinhamento).');
+  if (!tipoRelacao) riscos.push('Relação entre as partes não esclarecida (define tese/competência).');
+
+  const perguntas = [];
+  perguntas.push('Qual a data aproximada do início/fato principal?');
+  perguntas.push('Existe contrato, comprovante, nota fiscal ou documento-chave?');
+  perguntas.push('Houve tentativa de acordo/atendimento/protocolo?');
+  perguntas.push('Quais prejuízos concretos (valores, danos, consequências)?');
+  perguntas.push('Qual resultado esperado (pedido final)?');
+
+  const linhas = [];
+  linhas.push(`**Área provável:** ${area}`);
+  linhas.push(`**Urgência sugerida:** ${urg.level} (${urg.why})`);
+  linhas.push('');
+  linhas.push('**Riscos / pontos críticos:**');
+  linhas.push(riscos.length ? `- ${riscos.join('\n- ')}` : '- Nenhum risco crítico óbvio (a confirmar).');
+  linhas.push('');
+  linhas.push('**Perguntas para completar a triagem:**');
+  linhas.push(`- ${perguntas.join('\n- ')}`);
+
+  return linhas.join('\n');
 }
 
 function buildParecer(pre) {
-  const urgencia = safeText(pre?.urgencia, 40) || 'Média';
-  const resumo = pickResumo(pre);
+  const area = guessArea(pre);
+  const urg = guessUrgency(pre);
+  const docsEnviados = normalizeDocs(pre?.documentos);
 
-  return (
-    `Parecer inicial (regras):\n` +
-    `Com base no relato, recomenda-se confirmar datas e objetivo, coletar os documentos essenciais e avaliar riscos/prazos. ` +
-    `Urgência indicada: ${urgencia}.\n\n` +
-    `Resumo considerado:\n${resumo}`
-  );
+  const passos = [];
+  passos.push('Confirmar dados básicos (datas, partes, objetivo).');
+  passos.push('Coletar documentos essenciais e organizar em pasta do caso.');
+  passos.push('Avaliar viabilidade: prova mínima, riscos e estratégia (acordo vs ação).');
+  if (urg.level === 'Alta') passos.push('Priorizar atendimento imediato e checar medidas urgentes (liminar).');
+
+  const linhas = [];
+  linhas.push(`**Parecer inicial (operacional):**`);
+  linhas.push(`Área provável: ${area}. Urgência: ${urg.level}.`);
+  linhas.push('');
+  linhas.push('**Próximos passos recomendados:**');
+  linhas.push(`- ${passos.join('\n- ')}`);
+  linhas.push('');
+  linhas.push(`**Situação documental atual:** ${docsEnviados.length ? 'há documentos anexados' : 'sem documentos anexados'}.`);
+  linhas.push('Observação: esta análise é preliminar e depende da confirmação das informações acima.');
+
+  return linhas.join('\n');
 }
 
 class AiPreService {
@@ -93,9 +209,16 @@ class AiPreService {
     const pre = await preatendimentoService.getById(leadId);
     if (!pre) return null;
 
-    const resumo = pickResumo(pre);
-    const triagem = buildTriagem(pre);
-    const documentos = suggestDocs(pre);
+    // Agora “Resumo Estruturado” é realmente estruturado:
+    const resumo = buildStructuredResumo(pre);
+
+    // “Triagem” vira checklist real de perguntas + riscos
+    const triagem = buildTriagemText(pre);
+
+    // “Documentos” vira lista priorizada e considerando docs já enviados
+    const documentos = suggestDocuments(pre);
+
+    // “Parecer” vira próximos passos operacionais
     const parecer = buildParecer(pre);
 
     if (persist) {
@@ -107,7 +230,6 @@ class AiPreService {
             triagem,
             documentos,
             parecer,
-            docsEnviados: normalizeDocs(pre?.documentos),
           },
         },
         user
@@ -117,37 +239,26 @@ class AiPreService {
     return { resumo, triagem, documentos, parecer };
   }
 
+  // Você ainda pode evoluir draft/report depois
   async draft({ leadId, type }) {
     const pre = await preatendimentoService.getById(leadId);
     if (!pre) return null;
-
-    const t = safeText(type, 40) || 'peça';
     return {
-      titulo: `Minuta de ${t}`,
-      conteudo:
-        `EXCELENTÍSSIMO SENHOR DOUTOR JUIZ.\n\n` +
-        `Resumo (pré-atendimento):\n${pickResumo(pre)}\n\n` +
-        `[Estruture aqui: fatos → fundamentos → pedidos.]\n`,
-      status: 'Draft gerado (modelo inicial)',
+      titulo: `Minuta (${type || 'modelo'})`,
+      conteudo: `Resumo estruturado:\n${buildStructuredResumo(pre)}\n\n[Minuta a evoluir]`,
     };
   }
 
   async report({ leadId, type }) {
     const pre = await preatendimentoService.getById(leadId);
     if (!pre) return null;
-
     return {
-      message: 'Relatório gerado (modelo inicial)',
       type: type || 'json',
-      preatendimentoId: pre?.id || leadId,
-      categoria: safeText(pre?.categoria, 120),
-      urgencia: safeText(pre?.urgencia, 40),
-      resumo: pickResumo(pre),
-      note: type === 'pdf'
-        ? 'Implementar geração de PDF no próximo passo.'
-        : type === 'email'
-          ? 'Implementar envio por e-mail no próximo passo.'
-          : null,
+      resumo: buildStructuredResumo(pre),
+      triagem: buildTriagemText(pre),
+      documentos: suggestDocuments(pre),
+      parecer: buildParecer(pre),
+      note: 'Relatório inicial. Você pode gerar PDF depois.',
     };
   }
 }
