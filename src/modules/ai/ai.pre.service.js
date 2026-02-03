@@ -53,17 +53,6 @@ function guessArea(pre) {
   return toTitle(pre?.categoria) || 'A confirmar';
 }
 
-function guessArea(processo) {
-  const area = safeText(processo.area, 80).toLowerCase();
-  const texto = (safeText(processo.titulo, 300) + ' ' + safeText(processo.descricao, 2000)).toLowerCase();
-
-  if (area.includes('trabalh') || texto.includes('clt') || texto.includes('fgts') || texto.includes('demiss')) return 'Trabalhista';
-  if (area.includes('fam') || texto.includes('guarda') || texto.includes('pensão') || texto.includes('divórc')) return 'Família';
-  if (area.includes('consum') || texto.includes('produto') || texto.includes('reembolso') || texto.includes('cobrança')) return 'Consumidor';
-  if (area.includes('civel') || area.includes('civil') || texto.includes('contrato') || texto.includes('inadimpl')) return 'Cível/Contratos';
-  return processo.area || 'A confirmar';
-}
-
 function docChecklistByArea(areaLabel) {
   const area = (areaLabel || '').toLowerCase();
   if (area.includes('trabalh')) {
@@ -425,7 +414,6 @@ class AiPreService {
     return { resumo, triagem, documentos, parecer };
   }
 
-  // Você ainda pode evoluir draft/report depois
   async draft({ leadId, type }) {
     const pre = await preatendimentoService.getById(leadId);
     if (!pre) return null;
@@ -449,27 +437,4 @@ class AiPreService {
   }
 }
 
-class AiAtendimentoService {
-  async executar({ processoId, user, persist = false }) {
-    const processo = await caseService.getCaseById(processoId, user);
-    if (!processo) return null;
-
-    const docsNorm = normalizeDocs(processo.documentos);
-
-    const etapa1 = buildEtapa1(processo, docsNorm);
-    const etapa2 = buildEtapa2(processo);
-    const etapa3 = buildEtapa3(processo);
-    const etapa4 = buildEtapa4(processo, etapa2, etapa3);
-    const etapa5 = buildEtapa5(etapa4);
-    const etapa6 = buildEtapa6(processo, docsNorm);
-
-    const result = { etapa1, etapa2, etapa3, etapa4, etapa5, etapa6 };
-
-    if (persist) {
-    }
-
-    return result;
-  }
-}
-
-module.exports = new AiAtendimentoService();
+module.exports = new AiPreService();
