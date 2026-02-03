@@ -275,7 +275,11 @@ Termos em que, pede deferimento.`;
 
 function suggestDocuments(pre) {
   const area = guessArea(pre).toLowerCase();
-  const docsEnviados = new Set(normalizeDocs(pre?.documentos).map(d => d.toLowerCase()));
+  const docsEnviados = new Set(
+    normalizeDocs(pre?.documentos)
+      .map(d => (d?.nome || "").toLowerCase())
+      .filter(Boolean)
+  );
 
   const packs = [];
 
