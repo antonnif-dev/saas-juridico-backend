@@ -64,27 +64,157 @@ class AiController {
     }
   }
 
-  async executarAtendimento(req, res) {
+  async atendimentoWhatsApp(req, res) {
     try {
-      const processoId = req.body?.processoId || req.body?.caseId;
-      if (!processoId || typeof processoId !== 'string') {
-        return res.status(400).json({ error: 'processoId é obrigatório.' });
-      }
+      const processoId = req.body?.processoId;
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
 
-      const result = await aiAtendimentoService.executar({
-        processoId,
-        user: req.user,
-        persist: !!req.body?.persist,
-      });
-
+      const result = await aiAtendimentoService.mensagemCobrancaWhatsApp({ processoId, user: req.user });
       if (!result) return res.status(404).json({ error: 'Processo não encontrado.' });
 
       return res.json(result);
-    } catch (err) {
-      console.error('Erro em executarAtendimento:', err);
-      return res.status(500).json({ error: 'Erro ao executar IA do atendimento.' });
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao gerar mensagem.' });
     }
   }
+
+  async salvarMinuta(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const minuta = req.body?.minuta;
+      const tom = req.body?.tom || 'Objetivo e técnico';
+      if (!processoId || !minuta) return res.status(400).json({ error: 'processoId e minuta são obrigatórios.' });
+
+      const result = await aiAtendimentoService.salvarMinuta({ processoId, user: req.user, minuta, tom });
+      if (!result) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      return res.json(result);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao salvar minuta.' });
+    }
+  }
+
+  async regenerarMinuta(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Mais Formal';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const result = await aiAtendimentoService.regenerarMinuta({ processoId, user: req.user, tom });
+      if (!result) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      return res.json(result);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao regenerar minuta.' });
+    }
+  }
+
+  async baixarPdf(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Objetivo e técnico';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const pdf = await aiAtendimentoService.baixarPdf({ processoId, user: req.user, tom });
+      if (!pdf) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${pdf.filename}"`);
+      return res.send(pdf.buffer);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao gerar PDF.' });
+    }
+  }
+
+  async exportarZip(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Objetivo e técnico';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const zip = await aiAtendimentoService.exportarZip({ processoId, user: req.user, tom });
+      if (!zip) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zip.filename}"`);
+      return res.send(zip.buffer);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao exportar ZIP.' });
+    }
+  }
+
+  async executarAtendimento(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Objetivo e Contundente';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const pack = await aiAtendimentoService.executar({ processoId, user: req.user, tom });
+      if (!pack) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      return res.json(pack.result); // <- exatamente o que o frontend usa
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao executar IA.' });
+    }
+  }
+
+  async atendimentoWhatsApp(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const result = await aiAtendimentoService.gerarWhatsApp({ processoId, user: req.user });
+      if (!result) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      return res.json(result);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao gerar mensagem.' });
+    }
+  }
+
+  async atendimentoPdf(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Objetivo e Contundente';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const pdf = await aiAtendimentoService.gerarPdfBuffer({ processoId, user: req.user, tom });
+      if (!pdf) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${pdf.filename}"`);
+      return res.send(pdf.buffer);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao gerar PDF.' });
+    }
+  }
+
+  async atendimentoExportar(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      const tom = req.body?.tom || 'Objetivo e Contundente';
+      if (!processoId) return res.status(400).json({ error: 'processoId é obrigatório.' });
+
+      const zip = await aiAtendimentoService.gerarZipBuffer({ processoId, user: req.user, tom });
+      if (!zip) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zip.filename}"`);
+      return res.send(zip.buffer);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: 'Erro ao exportar.' });
+    }
+  }
+
 }
 
 module.exports = new AiController();

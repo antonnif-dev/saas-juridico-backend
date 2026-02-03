@@ -13,15 +13,17 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",
     "@upstash/qstash": "^2.8.3",
+    "archiver": "^7.0.1",
     "axios": "^1.12.2",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
-    "firebase-admin": "^13.5.0",
+    "firebase-admin": "^12.7.0",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
     "resend": "^6.1.1",
     "uuid": "^8.3.2",
     "zod": "^4.1.5"

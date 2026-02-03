@@ -174,6 +174,13 @@ class ProcessoService {
     return await processoRepository.updateMovimentacao(processoId, movimentacaoId, movimentacaoData);
   }
 
+  async updateCase(processoId, data, user) {
+    const existing = await this.getCaseById(processoId, user);
+    if (!existing) return null;
+
+    return await this.repository.update(processoId, data, user);
+  }
+
   async deleteMovimentacao(processoId, movimentacaoId, user) {
     await this._validateWritePermission(processoId, user);
     return await processoRepository.deleteMovimentacao(processoId, movimentacaoId);
