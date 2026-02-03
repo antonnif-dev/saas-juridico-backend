@@ -20,4 +20,13 @@ router.post('/atendimento/pdf', controller.baixarPdf);
 router.post('/atendimento/exportar', controller.exportarZip);
 router.post('/atendimento/exportar', controller.atendimentoExportar);
 
+// Pós Atentimentos
+router.post("/pos/sentenca/analisar", controller.posAnalisarSentenca);
+router.post("/pos/cliente/tradutor", controller.posTradutorCliente);
+router.post("/pos/cliente/relatorio", controller.posRelatorioMensal);
+router.post("/pos/estrategia/viabilidade", controller.posEstrategiaRecursal);
+router.post("/pos/estrategia/datajud", controller.posDatajudVisual);
+router.post("/pos/redacao/recurso", controller.posMinutarRecurso);
+router.post("/pos/pdf", controller.posPdf);
+
 module.exports = router;
