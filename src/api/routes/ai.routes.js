@@ -29,4 +29,10 @@ router.post("/pos/estrategia/datajud", controller.posDatajudVisual);
 router.post("/pos/redacao/recurso", controller.posMinutarRecurso);
 router.post("/pos/pdf", controller.posPdf);
 
+// Relatórios
+router.post("/relatorio/final", controller.relatorioFinal);
+router.post("/relatorio/preventivo", controller.relatorioPreventivo);
+router.post("/relatorio/nps", controller.relatorioMensagemNps);
+router.post("/relatorio/pdf", controller.relatorioPdf);
+
 module.exports = router;

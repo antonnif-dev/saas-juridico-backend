@@ -1,6 +1,7 @@
 const aiPreService = require('../../modules/ai/ai.pre.service');
 const aiAtendimentoService = require('../../modules/ai/ai.atendimento.service');
 const aiPosService = require("../../modules/ai/ai.pos.service");
+const aiRelatorioService = require("../../modules/ai/ai.relatorio.service");
 
 class AiController {
 
@@ -323,6 +324,72 @@ class AiController {
       return res.status(500).json({ error: "Erro ao gerar PDF." });
     }
   }
+
+  async relatorioFinal(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      if (!processoId) return res.status(400).json({ error: "processoId é obrigatório." });
+
+      const r = await aiRelatorioService.relatorioFinal({ processoId, user: req.user });
+      if (!r) return res.status(404).json({ error: "Processo não encontrado." });
+      if (r.error) return res.status(400).json(r);
+
+      return res.json(r);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: "Erro ao gerar relatório final." });
+    }
+  }
+
+  async relatorioPreventivo(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      if (!processoId) return res.status(400).json({ error: "processoId é obrigatório." });
+
+      const r = await aiRelatorioService.preventivo({ processoId, user: req.user });
+      if (!r) return res.status(404).json({ error: "Processo não encontrado." });
+      if (r.error) return res.status(400).json(r);
+
+      return res.json(r);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: "Erro ao gerar preventivo." });
+    }
+  }
+
+  async relatorioMensagemNps(req, res) {
+    try {
+      const processoId = req.body?.processoId;
+      if (!processoId) return res.status(400).json({ error: "processoId é obrigatório." });
+
+      const r = await aiRelatorioService.mensagemNps({ processoId, user: req.user });
+      if (!r) return res.status(404).json({ error: "Processo não encontrado." });
+      if (r.error) return res.status(400).json(r);
+
+      return res.json(r);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: "Erro ao gerar mensagem." });
+    }
+  }
+
+  async relatorioPdf(req, res) {
+    try {
+      const titulo = req.body?.titulo;
+      const conteudo = req.body?.conteudo;
+      if (!titulo || !conteudo) return res.status(400).json({ error: "titulo e conteudo são obrigatórios." });
+
+      const pdf = await aiRelatorioService.pdfFromText({ titulo, conteudo });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${pdf.filename}"`);
+      return res.send(pdf.buffer);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: "Erro ao gerar PDF." });
+    }
+  }
+
+
 }
 
 module.exports = new AiController();
