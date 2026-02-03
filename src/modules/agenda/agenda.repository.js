@@ -7,31 +7,33 @@ class AgendaRepository {
     return { id: docRef.id, ...itemData };
   }
 
-  // Busca os compromissos de um usuário, ordenados por data
   async findByUser(userId) {
     const snapshot = await agendaCollection
-    .where('responsavelUid', '==', userId)
-    .orderBy('dataHora', 'asc')
-    .get();
-    
+      .where('responsavelUid', '==', userId)
+      .orderBy('dataHora', 'asc')
+      .get();
+
     if (snapshot.empty) return [];
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  async findAllByUser(userId) {
-    // 1. Busca TODOS os documentos da coleção.
-    const snapshot = await agendaCollection.get();
+
+  async findAll() {
+    const snapshot = await agendaCollection
+      .orderBy('dataHora', 'asc')
+      .get();
 
     if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 
-    // 2. Converte os documentos para um array.
-    const todosOsCompromissos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  async findAllByUser(userId) {
+    const snapshot = await agendaCollection
+      .where('responsavelUid', '==', userId)
+      .orderBy('dataHora', 'asc')
+      .get();
 
-    // 3. Filtra o array em JavaScript para retornar apenas os do usuário logado.
-    const compromissosDoUsuario = todosOsCompromissos.filter(
-      compromisso => compromisso.responsavelUid === userId
-    );
-
-    return compromissosDoUsuario;
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
   async findById(itemId) {

@@ -109,23 +109,34 @@ class AgendaService {
   }
 
   async listItemsForUser(user) {
-    if (user.role === 'cliente') {
-      return [];
+    if (user.role === 'cliente') return [];
+
+    if (user.role === 'administrador' || user.role === 'advogado') {
+      const items = await agendaRepository.findAll();
+      return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
     }
 
     const userId = user.uid || user;
-    const items = await agendaRepository.findAllByUser(userId);
+    const items = await agendaRepository.findByUser(userId);
     return items.sort((a, b) => a.dataHora.seconds - b.dataHora.seconds);
   }
 
   async getItemById(itemId, user) {
-    const userId = user?.uid || user;
     const item = await agendaRepository.findById(itemId);
-    if (!item || item.responsavelUid !== userId) {
+    if (!item) throw new Error('Compromisso não encontrado.');
+
+    if (user?.role === 'administrador' || user?.role === 'advogado') {
+      return item;
+    }
+
+    const userId = user?.uid || user;
+    if (item.responsavelUid !== userId) {
       throw new Error('Compromisso não encontrado ou acesso não permitido.');
     }
+
     return item;
   }
+
 
   async deleteItem(itemId, user) {
     const userId = user?.uid || user;
