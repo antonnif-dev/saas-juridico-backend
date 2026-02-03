@@ -1,5 +1,6 @@
 const preatendimentoService = require('../../modules/preatendimento/preatendimento.service');
 const aiPreService = require('../../modules/ai/ai.pre.service');
+const aiAtendimentoService = require('../../modules/ai/ai.atendimento.service');
 
 class AiController {
 
@@ -60,6 +61,28 @@ class AiController {
     } catch (err) {
       console.error('Erro em generateReport:', err);
       return res.status(500).json({ error: 'Erro ao gerar relatório.' });
+    }
+  }
+
+  async executarAtendimento(req, res) {
+    try {
+      const processoId = req.body?.processoId || req.body?.caseId;
+      if (!processoId || typeof processoId !== 'string') {
+        return res.status(400).json({ error: 'processoId é obrigatório.' });
+      }
+
+      const result = await aiAtendimentoService.executar({
+        processoId,
+        user: req.user,
+        persist: !!req.body?.persist,
+      });
+
+      if (!result) return res.status(404).json({ error: 'Processo não encontrado.' });
+
+      return res.json(result);
+    } catch (err) {
+      console.error('Erro em executarAtendimento:', err);
+      return res.status(500).json({ error: 'Erro ao executar IA do atendimento.' });
     }
   }
 }

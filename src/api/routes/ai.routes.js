@@ -9,4 +9,6 @@ router.post('/triagem', controller.analyzeTriagem);
 router.post('/draft', controller.generateDraft);
 router.post('/report', controller.generateReport);
 
+router.post('/atendimento/executar', controller.executarAtendimento);
+
 module.exports = router;
