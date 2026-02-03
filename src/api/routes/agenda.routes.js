@@ -44,7 +44,7 @@ const createAgendaSchema = z.object({
     // Apenas validamos que é uma string. O serviço cuidará da conversão para data.
     dataHora: z.string({ required_error: 'A data e hora são obrigatórias.' }),
     tipo: z.enum(['Prazo', 'Audiência', 'Reunião', 'Outro']),
-    processoId: z.string({ required_error: 'É obrigatório vincular a um processo.' }),
+    processoId: z.string().nullable().optional(),
   })
 });
 
