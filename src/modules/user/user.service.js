@@ -3,11 +3,18 @@ const { auth } = require('../../config/firebase.config');
 const { db } = require('../../config/firebase.config');
 const userRepository = require('./user.repository');
 
+function isStrongPassword(pw) {
+  if (typeof pw !== 'string') return false;
+  if (pw.length < 8 || pw.length > 4096) return false;
+  if (!/[A-Z]/.test(pw)) return false;
+  if (!/[a-z]/.test(pw)) return false;
+  if (!/[0-9]/.test(pw)) return false;
+  if (!/[^A-Za-z0-9]/.test(pw)) return false;
+  return true;
+}
+
 class UserService {
 
-  /**
-   * HELPER: Normaliza o objeto de endereço
-   */
   _cleanAddress(addr) {
     if (!addr) return null;
     return {
@@ -21,23 +28,34 @@ class UserService {
     };
   }
 
-  /**
-   * CRIAÇÃO DE ADVOGADO (Admin)
-   */
   async createAdvogado(userData) {
+
     const { name, email, password, oab, dataNascimento, estadoCivil, phone, endereco } = userData;
 
-    // 1. Criação no Firebase Auth
+    if (!email || typeof email !== "string") {
+      const err = new Error("E-mail inválido.");
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!name || typeof name !== "string" || name.trim().length < 3) {
+      const err = new Error("Nome inválido.");
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!isStrongPassword(password)) {
+      const err = new Error('Senha não atende aos critérios de segurança.');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const userRecord = await auth.createUser({
       email,
       password,
       displayName: name,
     });
 
-    // 2. Define o papel (role) nas Custom Claims
     await auth.setCustomUserClaims(userRecord.uid, { role: 'advogado' });
 
-    // 3. Persistência no Firestore via Repository
     const firestoreData = {
       name,
       email,
@@ -91,7 +109,6 @@ class UserService {
     const authUpdates = {};
     if (name) authUpdates.displayName = name;
     if (email) authUpdates.email = email;
-    if (password && password.trim().length >= 6) authUpdates.password = password;
 
     if (Object.keys(authUpdates).length > 0) {
       await auth.updateUser(uid, authUpdates);

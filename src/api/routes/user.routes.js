@@ -8,11 +8,17 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 // --- ESQUEMAS DE VALIDAÇÃO (ZOD) ---
-
+const passwordStrong = z.string()
+  .min(8, 'A senha deve ter no mínimo 8 caracteres.')
+  .max(4096, 'A senha excede o tamanho máximo.')
+  .regex(/[A-Z]/, 'A senha deve conter pelo menos 1 letra maiúscula.')
+  .regex(/[a-z]/, 'A senha deve conter pelo menos 1 letra minúscula.')
+  .regex(/[0-9]/, 'A senha deve conter pelo menos 1 número.')
+  .regex(/[^A-Za-z0-9]/, 'A senha deve conter pelo menos 1 caractere especial.');
+  
 const profileFields = {
   name: z.string().min(3).optional(),
-  email: z.string().email().optional(),
-  password: z.string().min(6).optional(),
+  email: z.string().email().optional(), 
   cpfCnpj: z.string().optional(),
   phone: z.string().optional(),
   oab: z.string().optional(),
@@ -37,7 +43,7 @@ const createAdvogadoSchema = z.object({
   body: z.object({
     name: z.string({ required_error: 'O nome é obrigatório.' }).min(3),
     email: z.string({ required_error: 'O e-mail é obrigatório.' }).email(),
-    password: z.string({ required_error: 'A senha é obrigatória.' }).min(6),
+    password: passwordStrong,
   })
 });
 
