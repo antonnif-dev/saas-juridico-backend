@@ -91,8 +91,6 @@ class ClientController {
   }
 
   async delete(req, res) {
-    router.put('/:id', authMiddleware(['administrador', 'advogado']), ClientController.update);
-
     try {
       const { id } = req.params;
       await clientService.deleteClient(id);
